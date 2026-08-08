@@ -1,0 +1,2 @@
+# PDFs of cited works go here, one per bibliography key: refs/<bibkey>.pdf
+# Fetch them with `doiget fetch <doi|arxiv-id>` — see CLAUDE.md.
