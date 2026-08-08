@@ -112,10 +112,19 @@ jobs:
           PREV=$(git tag --sort=-v:refname | grep -v "^${{ needs.setup.outputs.tag }}$" | head -1)
           echo "prev=${PREV}" >> "$GITHUB_OUTPUT"
 
-      - name: Extract previous main.tex
+      # Materialise the previous revision as a directory tree (git only, no TeX
+      # on the runner); the flattening itself happens inside the LaTeX
+      # container below, which is where latexpand lives.
+      - name: Check out the previous revision into prev_rev/
         if: steps.tags.outputs.prev != ''
-        run: git show "${{ steps.tags.outputs.prev }}":main.tex > prev_main.tex
+        run: |
+          set -euo pipefail
+          mkdir -p prev_rev
+          git archive "${{ steps.tags.outputs.prev }}" | tar -x -C prev_rev
 
+      # latexdiff on main.tex alone shows nothing when the change lives in an
+      # \input child, which is where the content sits once the document is
+      # split into notes/*.tex — so flatten both revisions first.
       - name: Compile latexdiff
         if: steps.tags.outputs.prev != ''
         uses: xu-cheng/latex-action@v4
@@ -124,7 +133,9 @@ jobs:
           latexmk_use_lualatex: true
           pre_compile: |
             mkdir -p out
-            latexdiff prev_main.tex main.tex > diff.tex
+            (cd prev_rev && latexpand main.tex > ../prev_flat.tex)
+            latexpand main.tex > new_flat.tex
+            latexdiff prev_flat.tex new_flat.tex > diff.tex
 
       - uses: actions/upload-artifact@v7
         if: steps.tags.outputs.prev != ''
@@ -157,9 +168,41 @@ jobs:
     runs-on: ubuntu-latest
     if: always() && needs.setup.result == 'success' && needs.build-paper.result == 'success' && needs.build-diff.result != 'cancelled' && (needs.build-supplementary.result == 'success' || needs.build-supplementary.result == 'skipped')
     steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v8
         with:
           path: dl/
+
+      # Release notes as text: the commit log since the previous tag, plus this
+      # version's CHANGELOG entry if there is one. Without this the release
+      # body is empty and the only way to see what changed is to open a PDF.
+      - name: Compose release notes
+        run: |
+          set -euo pipefail
+          V="${{ needs.setup.outputs.tag }}"
+          PREV=$(git tag --sort=-v:refname | grep -v "^${V}$" | head -1 || true)
+          {
+            if [ -f CHANGELOG.md ]; then
+              awk -v v="## ${V#v} " '
+                index($0, v) == 1 { on = 1; next }
+                on && /^## / { exit }
+                on { print }
+              ' CHANGELOG.md | sed '/^$/{ x; /./d; x; }'
+            fi
+            if [ -n "$PREV" ]; then
+              echo
+              echo "### Commits since ${PREV}"
+              echo
+              git log --no-merges --format='- %s' "${PREV}..${V}" 2>/dev/null \
+                || git log --no-merges --format='- %s' "${PREV}..HEAD"
+              echo
+              echo "Source diff: \`git diff ${PREV} ${V} -- '*.tex'\` — or \`./scripts/diff.sh ${PREV} ${V}\` for a rendered latexdiff."
+            fi
+          } > release_notes.md
+          cat release_notes.md
 
       - name: Prepare release assets
         run: |
@@ -174,4 +217,5 @@ jobs:
         with:
           tag_name: ${{ needs.setup.outputs.tag }}
           files: release/*
+          body_path: release_notes.md
           generate_release_notes: true

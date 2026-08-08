@@ -30,4 +30,26 @@ esac
 
 printf '%s\n' "$NEW" > "$FILE"
 echo "VERSION: $CUR -> $NEW ($KIND)"
-echo "Next: git add VERSION && git commit"
+
+# Prepend a changelog stub so the release notes exist as text in the repo.
+SUMMARY="${2:-}"
+LOG="$ROOT/CHANGELOG.md"
+MARK='<!-- new entries go directly below this line -->'
+if [ -f "$LOG" ] && grep -qF "$MARK" "$LOG"; then
+  if grep -q "^## $NEW " "$LOG"; then
+    echo "CHANGELOG.md: entry for $NEW already present, left alone"
+  else
+    entry="## $NEW — $(date +%Y-%m-%d)
+
+${SUMMARY:-TODO: one paragraph on what changed and why.}"
+    awk -v mark="$MARK" -v entry="$entry" '
+      { print }
+      $0 == mark && !done { print ""; print entry; done = 1 }
+    ' "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+    echo "CHANGELOG.md: added an entry for $NEW${SUMMARY:+ }"
+    [ -z "$SUMMARY" ] && echo "  (fill in the TODO before opening the PR)"
+  fi
+  echo "Next: git add VERSION CHANGELOG.md && git commit"
+else
+  echo "Next: git add VERSION && git commit"
+fi

@@ -34,6 +34,9 @@ main.tex            # paper source (single file)
 supplemental.tex    # supplementary material (optional, create when needed)
 references.bib      # bibliography (BibTeX; entries from `doiget cite`)
 refs/               # PDF of every cited work, as refs/<bibkey>.pdf
+refs/src/           # full text of each reference for grepping (arXiv .tex, else .txt)
+CHANGELOG.md        # one entry per version, written by the PR that bumps it
+scripts/            # bump.sh, diff.sh, fetch_sources.sh
 figures/            # figures in PDF format only
 notes/              # scratch notes, not compiled
 .latexmkrc          # build recipe (LuaLaTeX + BibTeX, out/ dir)
@@ -61,7 +64,7 @@ The current version is stored in `VERSION` (e.g. `1.2.0`). The git tag `v{VERSIO
 `VersionCheck.yml` fails a PR whose `VERSION` is unchanged, and fails a bump that is not a single semver step. Bump with:
 
 ```sh
-./scripts/bump.sh patch     # or minor / major
+./scripts/bump.sh patch "One line on what changed."   # or minor / major
 ```
 
 | Command | Example: 1.2.3 → |
@@ -69,6 +72,19 @@ The current version is stored in `VERSION` (e.g. `1.2.0`). The git tag `v{VERSIO
 | `./scripts/bump.sh patch` | 1.2.4 |
 | `./scripts/bump.sh minor` | 1.3.0 |
 | `./scripts/bump.sh major` | 2.0.0 |
+
+The optional summary is prepended to `CHANGELOG.md` and becomes the release
+body.
+
+### Reading what changed
+
+```sh
+git diff v1.2.3 v1.2.4 -- '*.tex'     # text, greppable
+./scripts/diff.sh v1.2.3 v1.2.4       # rendered latexdiff PDF -> out/
+```
+
+Both flatten `\input` children, so changes in child files are visible — the
+release `diff-*.pdf` does the same.
 
 Every merged PR therefore ships a release, so each merge leaves a comparable snapshot: `paper-v{VERSION}.pdf` plus `diff-v{VERSION}.pdf`, a latexdiff against the previous tag. The version history is a one-to-one record of merged changes.
 
