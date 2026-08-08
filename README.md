@@ -32,7 +32,8 @@ The local build reads `.latexmkrc` and outputs to `out/`.
 ```
 main.tex            # paper source (single file)
 supplemental.tex    # supplementary material (optional, create when needed)
-references.bib      # bibliography (BibTeX format)
+references.bib      # bibliography (BibTeX; entries from `doiget cite`)
+refs/               # PDF of every cited work, as refs/<bibkey>.pdf
 figures/            # figures in PDF format only
 notes/              # scratch notes, not compiled
 .latexmkrc          # build recipe (LuaLaTeX + BibTeX, out/ dir)
