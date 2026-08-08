@@ -55,17 +55,25 @@ Comment out the `xcolor`/`ulem` block before final submission.
 
 The current version is stored in `VERSION` (e.g. `1.2.0`). The git tag `v{VERSION}` is the release identifier. `Release.yml` verifies they match before building.
 
-### Auto-bump on PR merge
+### Every PR must bump the version
 
-Add `[patch]`, `[minor]`, or `[major]` anywhere in a PR title or body. When the PR is merged to `main`, `AutoBump.yml` increments `VERSION`, commits it, creates the tag, and pushes — triggering the full release pipeline automatically.
+`VersionCheck.yml` fails a PR whose `VERSION` is unchanged, and fails a bump that is not a single semver step. Bump with:
 
-| Keyword | Example: 1.2.3 → |
+```sh
+./scripts/bump.sh patch     # or minor / major
+```
+
+| Command | Example: 1.2.3 → |
 |---|---|
-| `[patch]` | 1.2.4 |
-| `[minor]` | 1.3.0 |
-| `[major]` | 2.0.0 |
+| `./scripts/bump.sh patch` | 1.2.4 |
+| `./scripts/bump.sh minor` | 1.3.0 |
+| `./scripts/bump.sh major` | 2.0.0 |
 
-PRs without a keyword are merged without triggering a release.
+Every merged PR therefore ships a release, so each merge leaves a comparable snapshot: `paper-v{VERSION}.pdf` plus `diff-v{VERSION}.pdf`, a latexdiff against the previous tag. The version history is a one-to-one record of merged changes.
+
+The comparison is against the **current tip of `main`**, not the state at PR creation: if another PR merges first, the check goes red until you merge/rebase `main` into your branch and re-bump (expect a conflict on `VERSION` — keep your branch's higher value). With several PRs in flight, assign the ladder up front (0.1.1, 0.1.2, 0.1.3, …) and merge in that order.
+
+On a private repository under the Free plan, branch protection is unavailable, so the check is advisory in the mechanical sense — the merge button is the gate. On a public repository, add Version Check as a required status check to make it truly blocking.
 
 ### Manual release
 
