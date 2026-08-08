@@ -1,9 +1,14 @@
 name: Version Check
 
-# On every PR to main, if VERSION changed it must be a clean single-step
-# semantic-versioning bump (X.Y.Z -> a valid major/minor/patch increment).
-# A PR that does NOT touch VERSION passes — version bumps are optional, and
-# only a bumped VERSION triggers a release on merge (see AutoRelease.yml).
+# Every PR to main MUST bump VERSION by exactly one semver step
+# (patch, minor, or major). An unchanged VERSION fails: each merged PR is a
+# release, so the version never silently stands still and every merge leaves a
+# comparable snapshot (paper PDF + latexdiff against the previous tag).
+#
+# The comparison is against the CURRENT tip of the base branch, not the state
+# at PR creation. If another PR merges first, this check goes red until the
+# branch is rebased and re-bumped — that is intended: the ladder must stay
+# single-step. Use `scripts/bump.sh patch` to bump.
 
 on:
   pull_request:
@@ -45,12 +50,18 @@ jobs:
             exit 1
           fi
 
+          IFS=. read -r bM bm bp <<< "$BASE_VER"
+          NEXT_PATCH="${bM}.${bm}.$((bp + 1))"
+          NEXT_MINOR="${bM}.$((bm + 1)).0"
+          NEXT_MAJOR="$((bM + 1)).0.0"
+
           if [ "$HEAD_VER" = "$BASE_VER" ]; then
-            echo "VERSION unchanged ($HEAD_VER). No release will fire on merge. OK."
-            exit 0
+            echo "::error::VERSION is unchanged at ${BASE_VER}. Every PR must bump it by one step."
+            echo "::error::Run './scripts/bump.sh patch' (or minor/major) and commit, then push."
+            echo "::error::Allowed next values: ${NEXT_PATCH} (patch), ${NEXT_MINOR} (minor), ${NEXT_MAJOR} (major)."
+            exit 1
           fi
 
-          IFS=. read -r bM bm bp <<< "$BASE_VER"
           IFS=. read -r hM hm hp <<< "$HEAD_VER"
 
           if   [ "$hM" -eq "$((bM + 1))" ] && [ "$hm" -eq 0 ]            && [ "$hp" -eq 0 ]; then
@@ -60,9 +71,10 @@ jobs:
           elif [ "$hM" -eq "$bM" ]         && [ "$hm" -eq "$bm" ]         && [ "$hp" -eq "$((bp + 1))" ]; then
             KIND=patch
           else
-            echo "::error::VERSION must be a single-step semver bump from ${BASE_VER}."
-            echo "::error::Allowed next values: $((bM + 1)).0.0 (major), ${bM}.$((bm + 1)).0 (minor), ${bM}.${bm}.$((bp + 1)) (patch). Got '${HEAD_VER}'."
+            echo "::error::VERSION must be a single-step semver bump from ${BASE_VER} (the current tip of ${BASE_REF})."
+            echo "::error::Allowed next values: ${NEXT_MAJOR} (major), ${NEXT_MINOR} (minor), ${NEXT_PATCH} (patch). Got '${HEAD_VER}'."
+            echo "::error::If another PR merged first, rebase onto ${BASE_REF} and re-run './scripts/bump.sh patch'."
             exit 1
           fi
 
-          echo "Valid ${KIND} bump: ${BASE_VER} -> ${HEAD_VER}. Release will fire on merge."
+          echo "Valid ${KIND} bump: ${BASE_VER} -> ${HEAD_VER}. Release v${HEAD_VER} will fire on merge."
