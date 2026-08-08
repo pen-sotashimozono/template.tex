@@ -11,6 +11,8 @@ disciplines: **one version bump per PR** and **resolvable references**.
 | `main.tex` | paper source; child `.tex` files are pulled in with `\input` |
 | `references.bib` | bibliography — entries come from `doiget cite`, never hand-written |
 | `refs/` | one PDF per bibliography key: `refs/<bibkey>.pdf` |
+| `refs/src/` | full text of each reference for grepping — arXiv LaTeX source (`.tex`) where available, PDF extraction (`.txt`) otherwise |
+| `CHANGELOG.md` | one entry per version; the PR that bumps `VERSION` writes it |
 | `figures/` | figures, PDF only |
 | `notes/` | working notes |
 | `scripts/bump.sh` | version bump helper |
@@ -24,9 +26,12 @@ Build with `latexmk main.tex` → `out/main.pdf`.
 that is not a single semver step. Before opening a PR:
 
 ```sh
-./scripts/bump.sh patch     # or minor / major
-git add VERSION
+./scripts/bump.sh patch "One line on what changed and why."
+git add VERSION CHANGELOG.md
 ```
+
+The summary becomes the `CHANGELOG.md` entry and the release body, so the
+history is readable in-repo. Omitting it leaves a `TODO` to fill in.
 
 Each merged PR ships a release: `AutoRelease.yml` sees a `VERSION` with no
 matching tag and dispatches `Release.yml`, which tags `v{VERSION}` and attaches
@@ -55,7 +60,22 @@ citation:
 ```sh
 doiget fetch <doi|arxiv-id>   # PDF into the local store; copy it to refs/<bibkey>.pdf
 doiget cite  <doi|arxiv-id>   # BibTeX; paste into references.bib, rename the key
+./scripts/fetch_sources.sh    # fills refs/src/ with the full text of new entries
 ```
+
+`refs/src/` is what makes checking a citation cheap. Prefer it to opening the
+PDF:
+
+```sh
+grep -n 'F_Q' refs/src/hauke2016measuring.tex     # read the inequality in source form
+grep -l 'structure factor' refs/src/*.tex          # which references discuss it
+grep -o '\\cite{[^}]*}' refs/src/<key>.tex         # what that paper cites (catches second-hand claims)
+```
+
+Where the arXiv LaTeX source exists it beats PDF extraction: equations keep
+their structure, `\label{...}` gives a reference that is stable across the
+arXiv and published versions (whose equation *numbers* differ), and nothing is
+silently dropped — PDF extraction routinely loses Greek letters.
 
 Rules that follow:
 
