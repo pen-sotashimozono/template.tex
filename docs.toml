@@ -1,0 +1,19 @@
+# Root documents. One entry per compiled PDF.
+#
+# The section name is the tag prefix: [paper] releases as paper-v0.0.10.
+# Adding a document means adding `root` and an initial `version` -- nothing
+# else here is maintained by hand.
+#
+# `version` is rewritten by CI, not by hand. Until VersionCheck.yml is switched
+# over, the root VERSION file is still the authority and these two must agree.
+#
+# The dependency closure of a document is NOT listed here. It is derived from
+# the document's own build record -- see scripts/closure.py. A hand-maintained
+# list drifts; latexmk's records cannot.
+#
+# The second document -- a working notebook in article rather than revtex --
+# arrives with the two-document port (#17).
+
+[paper]
+root    = "main.tex"
+version = "0.0.10"

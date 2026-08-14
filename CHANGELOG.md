@@ -13,6 +13,14 @@ git diff v0.1.2 v0.1.3 -- '*.tex'     # text, greppable — prefer this
 
 <!-- new entries go directly below this line -->
 
+## 0.0.10 — 2026-08-14
+
+Add `docs.toml` and `scripts/closure.py`: each root document's dependency
+closure is now derived from its own build records (`out/<stem>.fls` and
+`out/<stem>.fdb_latexmk`), so version checks and releases can key off the
+`\input` children and `references.bib` rather than the root file alone.
+Nothing gates on it yet; `latex-ci.yml` only prints the closure.
+
 ## 0.0.9 — 2026-08-09
 
 Local diff rendering (`scripts/diff.sh`), a reference full-text corpus
