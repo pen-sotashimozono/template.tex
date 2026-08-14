@@ -26,6 +26,14 @@ jobs:
             lualatex --version
             bibtex --version
 
+      # Reads the build records latexmk just wrote. Not a gate yet -- it fails
+      # only on a missing record or a malformed docs.toml. It runs here because
+      # the closure must not depend on who built: git is case-sensitive and the
+      # Windows filesystem is not, so a locally computed closure can differ from
+      # this one. Printing it on every PR keeps that visible.
+      - name: Print document closures
+        run: python3 scripts/closure.py list
+
       - uses: actions/upload-artifact@v7
         with:
           name: paper-pdf
