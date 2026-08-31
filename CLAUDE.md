@@ -7,7 +7,7 @@ holds the PDF of every cited work.
 `.github/docs.toml` is the only version authority. The table name is the
 document id, and the rest follows from it:
 
-    [main]  ->  main.tex  ->  out/main.pdf  ->  tag main-v0.0.11
+    [main]  ->  main.tex  ->  out/main.pdf  ->  tag v0.0.11-main
 
 A third document is one table; the CI matrix, tags and releases pick it up
 unchanged.

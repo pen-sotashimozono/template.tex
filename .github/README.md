@@ -13,7 +13,7 @@ carries its own preamble, so either ships alone.
 - **LuaLaTeX** via latexmk, one `.latexmkrc` for every document
 - **Multiple root documents**: `.github/docs.toml` lists them; the build matrix, tags and releases are generated from it
 - **Two version checks**: a fast one allowing only a single semver step, and a closure-driven one requiring a bump for exactly the documents the PR touched
-- **Per-document releases**: `main-v1.2.3`, `notes-v0.4.0`, each with its own PDF and its own latexdiff
+- **Per-document releases**: `v1.2.3-main`, `v0.4.0-notes`, each with its own PDF and its own latexdiff
 - **arXiv bundle**: flattened `.tex` + `.bbl` + figures, compiled in isolation on every PR to prove it still builds
 - **DOI verification** against Crossref/arXiv via [doiget](https://github.com/sotashimozono/doiget)
 - **Dependabot** for GitHub Actions
@@ -83,10 +83,10 @@ One table per compiled PDF; the table name is the document id, and everything
 mechanical follows from it:
 
 ```toml
-[main]              # -> main.tex, out/main.pdf, tag main-v0.1.0
+[main]              # -> main.tex, out/main.pdf, tag v0.1.0-main
 version = "0.1.0"
 
-[notes]             # -> notes.tex, out/notes.pdf, tag notes-v0.1.0
+[notes]             # -> notes.tex, out/notes.pdf, tag v0.1.0-notes
 version = "0.1.0"
 ```
 
@@ -132,8 +132,8 @@ collide.
 ### Reading what changed
 
 ```sh
-git diff main-v1.2.3 main-v1.2.4 -- '*.tex'          # text, greppable
-./.github/scripts/diff.sh main-v1.2.3 main-v1.2.4    # rendered latexdiff -> out/
+git diff v1.2.3-main v1.2.4-main -- '*.tex'          # text, greppable
+./.github/scripts/diff.sh v1.2.3-main v1.2.4-main    # rendered latexdiff -> out/
 ```
 
 Both flatten `\input` children, as the release `diff-*.pdf` does. A PR touching
@@ -147,10 +147,10 @@ gh workflow run Release.yml --field document=main --field version=1.0.0
 
 | File | Contents |
 |---|---|
-| `main-v1.0.0.pdf` | compiled document |
-| `diff-main-v1.0.0.pdf` | latexdiff against this document's previous tag (skipped on its first) |
-| `supplemental-main-v1.0.0.pdf` | only if `supplemental.tex` exists |
-| `arxiv-bundle-main-v1.0.0.zip` | flattened `.tex` + `.bbl` + `figures/*.pdf` |
+| `v1.0.0-main.pdf` | compiled document |
+| `diff-v1.0.0-main.pdf` | latexdiff against this document's previous tag (skipped on its first) |
+| `supplemental-v1.0.0-main.pdf` | only if `supplemental.tex` exists |
+| `arxiv-bundle-v1.0.0-main.zip` | flattened `.tex` + `.bbl` + `figures/*.pdf` |
 
 The bundle is **flattened**, not copied: arXiv sees only what is inside the
 tarball, so a root that pulls content in through `\input` is not self-contained.

@@ -43,7 +43,7 @@ jobs:
 
           One entry per released version, newest first, headed by the tag it ships
           under. Each document in `docs.toml` has its own ladder, so entries
-          interleave: `main-v0.1.4` may sit above `notes-v0.3.0`. The PR that bumps
+          interleave: `v0.1.4-main` may sit above `v0.3.0-notes`. The PR that bumps
           a version adds its entry here, so the history is readable in-repo without
           downloading release artifacts. `./.github/scripts/bump.sh <document> <kind>
           "summary"` prepends the stub.
@@ -51,8 +51,8 @@ jobs:
           To see what actually changed in a document between two of its versions:
 
           ```sh
-          git diff main-v0.1.0 main-v0.1.1 -- '*.tex'     # text, greppable — prefer this
-          ./.github/scripts/diff.sh main-v0.1.0 main-v0.1.1       # rendered latexdiff PDF, for reading
+          git diff v0.1.0-main v0.1.1-main -- '*.tex'     # text, greppable — prefer this
+          ./.github/scripts/diff.sh v0.1.0-main v0.1.1-main       # rendered latexdiff PDF, for reading
           ```
 
           <!-- new entries go directly below this line -->

@@ -4,7 +4,7 @@
 One table per compiled PDF; the table name is the document id and the rest
 follows from it -- root file, build output, release tag:
 
-    [main]  ->  main.tex  ->  out/main.pdf  ->  main-v0.1.0
+    [main]  ->  main.tex  ->  out/main.pdf  ->  v0.1.0-main
 
 `root` overrides the default when the file is not <id>.tex. A table is a
 document iff it carries `version`. This is the only version authority; there is
@@ -17,7 +17,7 @@ Usage:
     python .github/scripts/docs.py ids [--json] [--file F]      # document ids
     python .github/scripts/docs.py root <id>                    # root .tex path
     python .github/scripts/docs.py version <id>                 # current version
-    python .github/scripts/docs.py tag <id>                     # <id>-v<version>
+    python .github/scripts/docs.py tag <id>                     # v<version>-<id>
     python .github/scripts/docs.py next <id> <patch|minor|major>
     python .github/scripts/docs.py bump <id> <patch|minor|major>
     python .github/scripts/docs.py init <version>               # every version -> X
@@ -269,7 +269,9 @@ def main() -> int:
     elif args.command == "version":
         print(docs[args.doc]["version"])
     elif args.command == "tag":
-        print(f"{args.doc}-v{docs[args.doc]['version']}")
+        # Version first: GitHub orders tags version-aware, so v0.0.12-main and
+        # v0.0.12-notes sit together and the newest release is at the top.
+        print(f"v{docs[args.doc]['version']}-{args.doc}")
     elif args.command == "next":
         print(next_version(docs[args.doc]["version"], args.kind, args.doc))
     elif args.command == "bump":
