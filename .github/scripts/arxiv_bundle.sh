@@ -3,15 +3,13 @@
 #
 #   ./scripts/arxiv_bundle.sh <document> [dest-dir]
 #
-# The bundle is flattened, not copied. A root that pulls content in through
-# \input is not self-contained, and arXiv gets only what is inside the tarball,
-# so an unflattened bundle fails there while every build here stays green. That
-# is not hypothetical: the bundle did exactly this until it was caught by hand.
+# Flattened, not copied: arXiv sees only what is inside the tarball, so a root
+# that pulls content in through \input is not self-contained. An unflattened
+# bundle fails there while every build here stays green.
 #
-# The verification is the reason this is a script rather than three lines in a
-# workflow. Producing the bundle is easy; noticing when it stops building is
-# not, and nothing else in CI ever opens it. It is compiled in a throwaway copy
-# so the build products do not end up inside the bundle that ships.
+# The verification is why this is a script and not three lines in a workflow --
+# nothing else in CI ever opens the tarball. It compiles a throwaway copy, so
+# the build products stay out of the bundle that ships.
 set -eu
 
 DOC="${1:?usage: $0 <document> [dest-dir]}"

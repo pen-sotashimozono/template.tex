@@ -1,15 +1,11 @@
 name: Auto Release
 
-# After a PR merges to main, release every document in docs.toml whose current
-# version has no matching tag yet. Versions are bumped by hand in the PR and
-# gated by the version-check job in latex-ci.yml, so a missing tag means the
-# merged PR raised that document's version.
+# After a merge, release every document whose version has no matching tag yet:
+# a missing tag means the merged PR raised that version. The document list is
+# read from docs.toml, never written here.
 #
-# The document list is never written here: it is read from docs.toml, so adding
-# a root document to the manifest is all it takes to get it released.
-#
-# No PAT required: Release.yml is triggered via workflow_dispatch, the one
-# event GITHUB_TOKEN can fire cross-workflow. Release.yml creates/pushes the tag.
+# No PAT required: workflow_dispatch is the one event GITHUB_TOKEN can fire
+# cross-workflow. Release.yml creates and pushes the tag.
 
 on:
   pull_request:
