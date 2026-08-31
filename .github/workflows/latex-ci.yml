@@ -73,7 +73,7 @@ jobs:
           # build stays green, so nothing else would ever notice it break.
           post_compile: |
             if [ "${{ steps.doc.outputs.arxiv }}" = "true" ]; then
-              ./scripts/arxiv_bundle.sh "${{ matrix.doc }}" arxiv-check
+              sh scripts/arxiv_bundle.sh "${{ matrix.doc }}" arxiv-check
             fi
 
       # Printed on every PR because the closure must not depend on who built:

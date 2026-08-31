@@ -109,7 +109,7 @@ jobs:
           # tarball that arXiv will reject.
           post_compile: |
             if [ "${{ needs.setup.outputs.arxiv }}" = "true" ]; then
-              ./scripts/arxiv_bundle.sh "${{ needs.setup.outputs.document }}" arxiv-src
+              sh scripts/arxiv_bundle.sh "${{ needs.setup.outputs.document }}" arxiv-src
             fi
 
       - uses: actions/upload-artifact@v7
