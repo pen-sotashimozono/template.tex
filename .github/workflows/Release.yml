@@ -53,13 +53,13 @@ jobs:
             VER="${GITHUB_REF_NAME##*-v}"
           fi
 
-          EXPECTED="$(python3 scripts/docs.py version "$DOC")"
+          EXPECTED="$(python3 .github/scripts/docs.py version "$DOC")"
           if [ "$VER" != "$EXPECTED" ]; then
             echo "ERROR: ${DOC} is at ${EXPECTED} in docs.toml, but this release is for ${VER}"
             exit 1
           fi
 
-          ROOT="$(python3 scripts/docs.py root "$DOC")"
+          ROOT="$(python3 .github/scripts/docs.py root "$DOC")"
           {
             echo "document=${DOC}"
             echo "tag=${DOC}-v${VER}"
@@ -105,7 +105,7 @@ jobs:
           # not on the runner host. The script compiles the bundle in isolation
           # and fails the job if it does not build, so a release cannot ship a
           # tarball that arXiv will reject.
-          post_compile: sh scripts/arxiv_bundle.sh "${{ needs.setup.outputs.document }}" arxiv-src
+          post_compile: sh .github/scripts/arxiv_bundle.sh "${{ needs.setup.outputs.document }}" arxiv-src
 
       - uses: actions/upload-artifact@v7
         with:
@@ -214,12 +214,12 @@ jobs:
           set -euo pipefail
           PREV=$(git tag --list "${DOC}-v*" --sort=-v:refname | grep -v "^${TAG}$" | head -1 || true)
           {
-            if [ -f CHANGELOG.md ]; then
+            if [ -f .github/CHANGELOG.md ]; then
               awk -v v="## ${TAG} " '
                 index($0, v) == 1 { on = 1; next }
                 on && /^## / { exit }
                 on { print }
-              ' CHANGELOG.md | sed '/^$/{ x; /./d; x; }'
+              ' .github/CHANGELOG.md | sed '/^$/{ x; /./d; x; }'
             fi
             if [ -n "$PREV" ]; then
               echo
@@ -228,7 +228,7 @@ jobs:
               git log --no-merges --format='- %s' "${PREV}..${TAG}" 2>/dev/null \
                 || git log --no-merges --format='- %s' "${PREV}..HEAD"
               echo
-              echo "Source diff: \`git diff ${PREV} ${TAG} -- '*.tex'\` — or \`./scripts/diff.sh ${PREV} ${TAG}\` for a rendered latexdiff."
+              echo "Source diff: \`git diff ${PREV} ${TAG} -- '*.tex'\` — or \`./.github/scripts/diff.sh ${PREV} ${TAG}\` for a rendered latexdiff."
             fi
           } > release_notes.md
           cat release_notes.md

@@ -32,7 +32,7 @@ jobs:
       - id: list
         run: |
           set -euo pipefail
-          IDS="$(python3 scripts/docs.py ids --json)"
+          IDS="$(python3 .github/scripts/docs.py ids --json)"
           echo "Documents: ${IDS}"
           echo "ids=${IDS}" >> "$GITHUB_OUTPUT"
 
@@ -52,7 +52,7 @@ jobs:
           DOC: ${{ matrix.doc }}
         run: |
           set -euo pipefail
-          ROOT="$(python3 scripts/docs.py root "$DOC")"
+          ROOT="$(python3 .github/scripts/docs.py root "$DOC")"
           echo "root=${ROOT}" >> "$GITHUB_OUTPUT"
           echo "stem=$(basename "$ROOT" .tex)" >> "$GITHUB_OUTPUT"
 
@@ -73,13 +73,13 @@ jobs:
           # Every document, not just the ones headed for arXiv -- the check is
           # really "is this document self-contained once flattened", which is
           # worth knowing either way.
-          post_compile: sh scripts/arxiv_bundle.sh "${{ matrix.doc }}" arxiv-check
+          post_compile: sh .github/scripts/arxiv_bundle.sh "${{ matrix.doc }}" arxiv-check
 
       # Printed on every PR because the closure must not depend on who built:
       # git is case-sensitive and the Windows filesystem is not, so a locally
       # computed closure can differ from this one.
       - name: Print document closure
-        run: python3 scripts/closure.py list "${{ matrix.doc }}"
+        run: python3 .github/scripts/closure.py list "${{ matrix.doc }}"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -124,11 +124,11 @@ jobs:
           # A full ref, not a shallow one: the closure diff needs a merge base.
           git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
           BASE="origin/${BASE_REF}"
-          git show "${BASE}:docs.toml" > base-docs.toml 2>/dev/null || : > base-docs.toml
+          git show "${BASE}:.github/docs.toml" > base-docs.toml 2>/dev/null || : > base-docs.toml
 
           # Which documents did this branch actually change, through their
           # \input children and references.bib rather than the root file alone?
-          AFFECTED="$(python3 scripts/closure.py affected --base "$BASE")"
+          AFFECTED="$(python3 .github/scripts/closure.py affected --base "$BASE")"
           if [ -z "$AFFECTED" ]; then
             echo "No document's dependency closure changed — no bump required."
           else
@@ -138,4 +138,4 @@ jobs:
           # Unquoted on purpose: each id is its own argument, and an empty
           # AFFECTED must reach check-bump as "--only" with zero ids, meaning
           # nothing may bump -- not as "no --only", which would demand all of them.
-          python3 scripts/docs.py check-bump --base base-docs.toml --only $AFFECTED
+          python3 .github/scripts/docs.py check-bump --base base-docs.toml --only $AFFECTED

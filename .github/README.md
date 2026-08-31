@@ -36,20 +36,34 @@ The local build reads `.latexmkrc` and outputs to `out/`.
 
 ## File structure
 
+The root holds the documents and nothing else. Everything that runs them
+lives under `.github/`, and the skills under `.claude/`. Both are hidden, so
+opening the repository to write shows the writing.
+
 ```
-docs.toml           # root documents and their versions -- the version authority
-main.tex            # paper, revtex4-2 two-column PRB
-notes.tex           # working notebook, article
-supplemental.tex    # supplementary material (optional, create when needed)
-references.bib      # bibliography (BibTeX; entries from `doiget cite`)
-refs/               # PDF of every cited work, as refs/<bibkey>.pdf
-refs/src/           # full text of each reference for grepping (arXiv .tex, else .txt)
-CHANGELOG.md        # one entry per version, written by the PR that bumps it
-scripts/            # bump.sh, docs.py, closure.py, diff.sh, fetch_sources.sh
-figures/            # figures in PDF format only
-notes/              # child .tex files of notes.tex
-.latexmkrc          # build recipe (LuaLaTeX + BibTeX, out/ dir)
+main.tex                    # paper, revtex4-2 two-column PRB
+notes.tex                   # working notebook, article
+supplemental.tex            # supplementary material (optional, create when needed)
+references.bib              # bibliography (BibTeX; entries from `doiget cite`)
+figures/                    # figures in PDF format only
+notes/                      # child .tex files of notes.tex
+refs/                       # PDF of every cited work, as refs/<bibkey>.pdf
+refs/src/                   # full text of each reference for grepping
+.latexmkrc                  # build recipe (LuaLaTeX + BibTeX, out/ dir)
+CLAUDE.md                   # working rules
+
+.github/docs.toml           # root documents and their versions -- the version authority
+.github/CHANGELOG.md        # one entry per version, written by the PR that bumps it
+.github/scripts/            # bump.sh, docs.py, closure.py, diff.sh, arxiv_bundle.sh
+.github/workflows/         # build, version check, release
+.claude/skills/changelog/   # how to record a change and bump
+
+out/                        # build output (gitignored)
 ```
+
+`.latexmkrc` and `CLAUDE.md` cannot move: latexmk only auto-reads an rc file
+from the working directory, and Claude Code only reads `CLAUDE.md` from the
+repository root.
 
 ## Revision markup
 
@@ -66,7 +80,7 @@ Comment out the `xcolor`/`ulem` block before final submission.
 
 ## Documents and versioning
 
-`docs.toml` lists the root documents. One table per compiled PDF, and the table
+`.github/docs.toml` lists the root documents. One table per compiled PDF, and the table
 name is the document id — everything mechanical follows from it, so adding a
 document is one table and nothing else:
 
@@ -94,22 +108,22 @@ never collide.
 
 ### Every PR bumps the documents it touches — and only those
 
-The `version-check` job asks `scripts/closure.py` which documents this branch
+The `version-check` job asks `.github/scripts/closure.py` which documents this branch
 actually changed, through their `\input` children and `references.bib` rather
 than the root file alone, and requires a single semver step for exactly those.
 A document the PR did not touch must stay put. A PR that touches no document at
 all — CI, README, tooling — needs no bump.
 
 ```sh
-./scripts/bump.sh --affected patch "One line on what changed."   # or minor / major
-./scripts/bump.sh notes patch "..."                              # or name it explicitly
+./.github/scripts/bump.sh --affected patch "One line on what changed."   # or minor / major
+./.github/scripts/bump.sh notes patch "..."                              # or name it explicitly
 ```
 
 | Command | Example: 1.2.3 → |
 |---|---|
-| `./scripts/bump.sh main patch` | 1.2.4 |
-| `./scripts/bump.sh main minor` | 1.3.0 |
-| `./scripts/bump.sh main major` | 2.0.0 |
+| `./.github/scripts/bump.sh main patch` | 1.2.4 |
+| `./.github/scripts/bump.sh main minor` | 1.3.0 |
+| `./.github/scripts/bump.sh main major` | 2.0.0 |
 
 `--affected` computes the same set CI will demand. Two preconditions: build
 first, since it reads the records under `out/`, and commit your content changes
@@ -123,7 +137,7 @@ release, and becomes the release body.
 
 ```sh
 git diff main-v1.2.3 main-v1.2.4 -- '*.tex'     # text, greppable
-./scripts/diff.sh main-v1.2.3 main-v1.2.4       # rendered latexdiff PDF -> out/
+./.github/scripts/diff.sh main-v1.2.3 main-v1.2.4       # rendered latexdiff PDF -> out/
 ```
 
 Both flatten `\input` children, so changes in child files are visible — the
@@ -154,7 +168,7 @@ The pipeline builds in parallel and attaches to the GitHub Release:
 
 The bundle is **flattened**, not copied: a root that pulls content in through
 `\input` is not self-contained, and arXiv sees only what is inside the tarball.
-`scripts/arxiv_bundle.sh` builds it and then compiles it in isolation, and CI
+`.github/scripts/arxiv_bundle.sh` builds it and then compiles it in isolation, and CI
 runs that for every document on every PR — an unflattened bundle fails on arXiv
 while every build here stays green, so nothing else would notice it break. The
 check is really "is this document self-contained once flattened", which is
