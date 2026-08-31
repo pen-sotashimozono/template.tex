@@ -1,21 +1,17 @@
 #!/usr/bin/env python3
-"""The document manifest: docs.toml, and the version ladder it carries.
+"""The document manifest and the version ladder it carries.
 
-One table per compiled PDF. The table name is the document id, and everything
-mechanical is derived from it -- root file, build output, release tag:
+One table per compiled PDF; the table name is the document id and the rest
+follows from it -- root file, build output, release tag:
 
     [main]  ->  main.tex  ->  out/main.pdf  ->  main-v0.1.0
 
-so adding a document means adding a table with a version, and no workflow has
-to be told about it separately. `root` overrides the default when the file is
-not <id>.tex. A table is a document iff it carries `version`.
+`root` overrides the default when the file is not <id>.tex. A table is a
+document iff it carries `version`. This is the only version authority; there is
+no VERSION file.
 
-This file is the only version authority in the repository. There is no VERSION
-file: it held the same number as this manifest and nothing reconciled the two.
-
-Writes rewrite a single `version = "..."` line in place rather than going
-through a TOML dumper. A dumper reformats the whole file and drops every
-comment, and docs.toml is meant to stay readable by hand.
+Writes rewrite the single `version = "..."` line in place. A TOML dumper would
+reformat the file and drop every comment, and docs.toml is read by hand.
 
 Usage:
     python scripts/docs.py ids [--json] [--file F]      # document ids

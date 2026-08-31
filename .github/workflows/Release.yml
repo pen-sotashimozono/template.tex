@@ -1,11 +1,8 @@
 name: Release
 
-# Releases one document from docs.toml. The tag is <document>-v<version>, so
-# each root document carries its own ladder and its own release history.
-#
-# Everything mechanical is derived from the document id: the root .tex, the
-# build output, the tag, and the asset names. Adding a document to docs.toml is
-# enough — nothing here enumerates them.
+# Releases one document from docs.toml as <document>-v<version>, so each root
+# carries its own ladder. The root .tex, build output, tag and asset names are
+# all derived from the document id; nothing here enumerates the documents.
 
 on:
   push:

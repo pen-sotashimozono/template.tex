@@ -1,18 +1,11 @@
 name: Version Check
 
-# Every version in .github/docs.toml is either unchanged or exactly one semver
-# step from the base branch. Nothing else is allowed: no two-step jumps, no
-# going backwards, no X.Y or 1.2.3.4.
+# Every version in .github/docs.toml is unchanged or exactly one semver step
+# from the base. Which documents *ought* to have moved is the version-check job
+# in latex-ci.yml, which needs each closure and therefore the build.
 #
-# This does NOT decide which documents ought to have been bumped. That is the
-# version-check job in latex-ci.yml, which asks each document's dependency
-# closure and therefore needs the build records latexmk writes.
-#
-# Keeping the weaker rule separate buys two things the stronger one cannot
-# give. It answers in seconds instead of after a LaTeX build, so a mistyped
-# version is caught immediately. And it still runs when a build fails -- which
-# is precisely when the closure-driven check cannot run at all, because its job
-# depends on the build matrix.
+# Worth a separate workflow because it answers in seconds rather than after a
+# LaTeX build, and still runs when a build fails -- when the other cannot.
 
 on:
   pull_request:

@@ -1,15 +1,12 @@
 name: LaTeX CI
 
-# Builds every root document in docs.toml and, on a PR, validates the version
-# ladder against what the build says actually changed.
+# Builds every root document in docs.toml, and on a PR checks that the versions
+# match what the build says changed. The matrix is generated from the manifest.
 #
-# The matrix is generated from the manifest rather than written here, so adding
-# a document is one table in docs.toml and nothing else.
-#
-# The version check lives in this workflow rather than its own because it needs
-# the build records latexmk writes (out/<stem>.fls and out/<stem>.fdb_latexmk).
-# Those are what say which files a document actually depends on; without them
-# the check can only compare the root file and misses every \input child.
+# The version check lives here rather than in its own workflow because it needs
+# the build records latexmk writes (out/<stem>.fls, out/<stem>.fdb_latexmk).
+# Without them it could only compare root files and would miss every \input
+# child. VersionCheck.yml carries the weaker rule that needs no build.
 
 on:
   push:

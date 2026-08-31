@@ -1,14 +1,11 @@
 name: Initialize from template
 
-# Runs once in a repository generated from this template (via "Use this
-# template"). It resets every document in docs.toml to the starting 0.1.0,
-# clears the template's own changelog, and then deletes itself so it never
-# runs again.
+# Runs once in a repository generated from this template, then deletes itself.
+# Resets every document to 0.1.0, clears the template's changelog, and removes
+# LICENSE, which covers the template rather than the work written with it.
 #
-# Guard: github.event.repository.is_template is true ONLY in the template repo
-# itself, so this job is skipped there and runs only in generated repos. The
-# self-deletion is the second safety net — after the first push the workflow
-# file is gone, so it cannot re-trigger.
+# Guarded twice: is_template is true only in the template repository itself,
+# and the slug exclusion is a backstop. Self-deletion is the third.
 
 on:
   push:
