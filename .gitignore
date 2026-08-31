@@ -4,6 +4,9 @@
 # Python bytecode from scripts/
 __pycache__/
 
+# doiget's store, if DOIGET_STORE_ROOT is unset and it lands here
+/papers/
+
 # arXiv submission bundles, produced by scripts/arxiv_bundle.sh
 /arxiv-src/
 /arxiv-check/

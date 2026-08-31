@@ -21,6 +21,14 @@ those entries are left as written rather than rewritten to match.
 
 <!-- new entries go directly below this line -->
 
+## notes-v0.0.12 — 2026-08-31
+
+Add a references skill and refs_sync.sh, so references.bib drives refs/ from the doiget store.
+
+## main-v0.0.12 — 2026-08-31
+
+Add a references skill and refs_sync.sh, so references.bib drives refs/ from the doiget store.
+
 ## notes-v0.0.11 — 2026-08-31
 
 First release of the working notebook: article class, one column, self-contained

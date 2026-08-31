@@ -32,8 +32,8 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `figures/`, `notes/` | figures (PDF only); children of `notes.tex` |
 | `.github/docs.toml` | root documents and versions |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
-| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `fetch_sources.sh` |
-| `.claude/skills/changelog/` | how to record a change and bump |
+| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh` |
+| `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget) |
 | `out/` | build output (gitignored) |
 
 `latexmk main.tex` → `out/main.pdf`, `latexmk notes.tex` → `out/notes.pdf`. One
@@ -95,10 +95,14 @@ does not track never reaches the tarball.
 Crossref and arXiv when that file changes.
 
 ```sh
-doiget fetch <doi|arxiv-id>   # PDF into the store; copy to refs/<bibkey>.pdf
-doiget cite  <doi|arxiv-id>   # BibTeX; paste in, rename the key
-./.github/scripts/fetch_sources.sh   # fills refs/src/
+doiget cite <doi|arxiv-id>           # BibTeX; paste in verbatim, rename the key
+./.github/scripts/refs_sync.sh       # every entry gets refs/<bibkey>.pdf
+./.github/scripts/fetch_sources.sh   # and refs/src/<bibkey>.tex or .txt
 ```
+
+The **`references` skill** carries this, including pinning `DOIGET_STORE_ROOT`
+— the store defaults to `./papers` under the cwd, so doiget run from a paper
+repository builds a second store inside it.
 
 `refs/src/` makes checking a citation cheap — prefer it to opening the PDF:
 
