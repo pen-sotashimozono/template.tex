@@ -121,7 +121,7 @@ jobs:
           # A full ref, not a shallow one: the closure diff needs a merge base.
           git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
           BASE="origin/${BASE_REF}"
-          git show "${BASE}:.github/docs.toml" > base-docs.toml 2>/dev/null || : > base-docs.toml
+          git show "${BASE}:docs.toml" > base-docs.toml 2>/dev/null || : > base-docs.toml
 
           # Which documents did this branch actually change, through their
           # \input children and references.bib rather than the root file alone?

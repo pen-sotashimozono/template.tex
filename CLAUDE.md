@@ -4,7 +4,7 @@ Two root documents: `main.tex` (paper, revtex4-2 two-column PRB) and
 `notes.tex` (working notebook, article). They share `references.bib`; `refs/`
 holds the PDF of every cited work.
 
-`.github/docs.toml` is the only version authority. The table name is the
+`docs.toml` is the only version authority. The table name is the
 document id, and the rest follows from it:
 
     [main]  ->  main.tex  ->  out/main.pdf  ->  tag v0.0.11-main
@@ -28,9 +28,9 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 |---|---|
 | `main.tex`, `notes.tex` | the documents; children pulled in with `\input` |
 | `references.bib` | bibliography — from `doiget cite`, never hand-written |
+| `docs.toml` | root documents and versions — the version authority |
 | `refs/`, `refs/src/` | one PDF per bibkey; full text for grepping |
 | `figures/`, `notes/` | figures (PDF only); children of `notes.tex` |
-| `.github/docs.toml` | root documents and versions |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
 | `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh` |
 | `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget) |
@@ -48,7 +48,7 @@ markup compile under either class.
 
 ```sh
 ./.github/scripts/bump.sh --affected patch "One line on what changed and why."
-git add .github/docs.toml .github/CHANGELOG.md
+git add docs.toml .github/CHANGELOG.md
 ```
 
 `--affected` asks `closure.py` which documents actually changed, through their
@@ -75,7 +75,7 @@ document's own previous tag) and the arXiv bundle.
 Comparison is against the **current tip of `main`**. When two PRs touch the
 *same* document, only the next in its queue is green; take `main` in (a
 base-branch update alone does not re-trigger checks), resolve the
-`.github/docs.toml` conflict by keeping your higher value, and re-bump. PRs on
+`docs.toml` conflict by keeping your higher value, and re-bump. PRs on
 different documents do not collide.
 
 ## The submission bundle must compile alone

@@ -39,7 +39,7 @@ if [ "$TARGET" = "--affected" ]; then
   # A document absent from the base branch is new, and the version check
   # accepts whatever version it arrives with -- there is nothing to step from.
   # Bumping it here would push it off its intended initial version.
-  BASE_DOCS="$(git -C "$ROOT" show "$BASE:.github/docs.toml" 2>/dev/null > "$ROOT/.base-docs.tmp"     && "$PY" "$DOCS" ids --file "$ROOT/.base-docs.tmp" 2>/dev/null || true)"
+  BASE_DOCS="$(git -C "$ROOT" show "$BASE:docs.toml" 2>/dev/null > "$ROOT/.base-docs.tmp"     && "$PY" "$DOCS" ids --file "$ROOT/.base-docs.tmp" 2>/dev/null || true)"
   rm -f "$ROOT/.base-docs.tmp"
 
   DOC_LIST=''
@@ -95,7 +95,7 @@ done
 
 echo "Will release on merge:${TOUCHED}"
 if [ -f "$LOG" ]; then
-  echo "Next: git add .github/docs.toml .github/CHANGELOG.md && git commit"
+  echo "Next: git add docs.toml .github/CHANGELOG.md && git commit"
 else
-  echo "Next: git add .github/docs.toml && git commit"
+  echo "Next: git add docs.toml && git commit"
 fi

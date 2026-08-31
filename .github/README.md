@@ -11,7 +11,7 @@ carries its own preamble, so either ships alone.
 
 - **revtex4-2** PRB two-column, plus a self-contained **article** notebook
 - **LuaLaTeX** via latexmk, one `.latexmkrc` for every document
-- **Multiple root documents**: `.github/docs.toml` lists them; the build matrix, tags and releases are generated from it
+- **Multiple root documents**: `docs.toml` lists them; the build matrix, tags and releases are generated from it
 - **Two version checks**: a fast one allowing only a single semver step, and a closure-driven one requiring a bump for exactly the documents the PR touched
 - **Per-document releases**: `v1.2.3-main`, `v0.4.0-notes`, each with its own PDF and its own latexdiff
 - **arXiv bundle**: flattened `.tex` + `.bbl` + figures, compiled in isolation on every PR to prove it still builds
@@ -46,12 +46,12 @@ main.tex                    # paper, revtex4-2 two-column PRB
 notes.tex                   # working notebook, article
 supplemental.tex            # supplementary material (optional)
 references.bib              # bibliography, from `doiget cite`
+docs.toml                   # root documents and versions — the version authority
 figures/  notes/            # figures (PDF only); children of notes.tex
 refs/  refs/src/            # one PDF per bibkey; full text for grepping
 .latexmkrc                  # LuaLaTeX + BibTeX into out/
 CLAUDE.md  LICENSE          # root-only, see below
 
-.github/docs.toml           # root documents and versions — the version authority
 .github/CHANGELOG.md        # one entry per version
 .github/scripts/            # bump.sh, docs.py, closure.py, diff.sh, arxiv_bundle.sh, refs_sync.sh, fetch_sources.sh
 .github/workflows/          # build, version checks, release, reference verification
@@ -126,7 +126,7 @@ configured, so the merge button is the gate; require both to make it blocking.
 
 Comparison is against the **current tip of `main`**. If another PR merges first
 having touched the same document, take `main` in, keep your higher value in the
-`.github/docs.toml` conflict, and re-bump. PRs on different documents do not
+`docs.toml` conflict, and re-bump. PRs on different documents do not
 collide.
 
 ### Reading what changed

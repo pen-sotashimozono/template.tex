@@ -1,6 +1,6 @@
 name: Version Check
 
-# Every version in .github/docs.toml is unchanged or exactly one semver step
+# Every version in docs.toml is unchanged or exactly one semver step
 # from the base. Which documents *ought* to have moved is the version-check job
 # in latex-ci.yml, which needs each closure and therefore the build.
 #
@@ -32,5 +32,5 @@ jobs:
           # An absent manifest on the base leaves an empty one, which reads
           # every document as new -- accepted, since there is nothing to step
           # from.
-          git show "FETCH_HEAD:.github/docs.toml" > base-docs.toml 2>/dev/null || : > base-docs.toml
+          git show "FETCH_HEAD:docs.toml" > base-docs.toml 2>/dev/null || : > base-docs.toml
           python3 .github/scripts/docs.py check-step --base base-docs.toml
