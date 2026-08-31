@@ -22,7 +22,7 @@
 # This script is for a rendered, human-readable diff.
 set -eu
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 PY="${PYTHON:-python3}"
 command -v "$PY" >/dev/null 2>&1 || PY=python
@@ -36,7 +36,7 @@ fi
 FROM="${1:?usage: $0 [-d DOCUMENT] <from-rev> [to-rev]}"
 TO="${2:-}"
 
-IDS="$("$PY" scripts/docs.py ids)"
+IDS="$("$PY" .github/scripts/docs.py ids)"
 if [ -z "$DOC" ]; then
   # main-v0.1.2 -> main, but only if that is really a document
   CANDIDATE="${FROM%-v*}"
@@ -55,7 +55,7 @@ if [ -z "$DOC" ]; then
     exit 1
   fi
 fi
-ROOT_TEX="$("$PY" scripts/docs.py root "$DOC")"
+ROOT_TEX="$("$PY" .github/scripts/docs.py root "$DOC")"
 
 command -v latexpand >/dev/null || { echo "latexpand not found (TeX Live)" >&2; exit 1; }
 command -v latexdiff >/dev/null || { echo "latexdiff not found (TeX Live)" >&2; exit 1; }

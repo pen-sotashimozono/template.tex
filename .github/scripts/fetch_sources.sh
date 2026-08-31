@@ -19,7 +19,7 @@ set -eu
 FORCE=0
 [ "${1:-}" = "--force" ] && FORCE=1
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 command -v doiget >/dev/null || { echo "doiget not found" >&2; exit 1; }
 mkdir -p refs/src

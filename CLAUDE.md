@@ -21,6 +21,15 @@ made twice, and nothing catches a missed one.
 
 ## Layout
 
+The repository root holds the documents and nothing else. Everything that runs
+them -- workflows, scripts, the manifest, the changelog, the licence -- lives
+under `.github/`, and the skills under `.claude/`. Both are hidden, so opening
+the repository to write shows the writing.
+
+`.latexmkrc` and `CLAUDE.md` are the exceptions and cannot move: latexmk only
+auto-reads an rc file from the working directory, and Claude Code only reads
+`CLAUDE.md` from the repository root.
+
 | Path | Contents |
 |---|---|
 | `main.tex` | paper, revtex4-2 two-column PRB; children pulled in with `\input` |
@@ -28,14 +37,12 @@ made twice, and nothing catches a missed one.
 | `references.bib` | bibliography — entries come from `doiget cite`, never hand-written |
 | `refs/` | one PDF per bibliography key: `refs/<bibkey>.pdf` |
 | `refs/src/` | full text of each reference for grepping — arXiv LaTeX source (`.tex`) where available, PDF extraction (`.txt`) otherwise |
-| `docs.toml` | root documents and their versions -- the version authority |
-| `CHANGELOG.md` | one entry per version, headed by its tag; the PR that bumps writes it |
+| `.github/docs.toml` | root documents and their versions -- the version authority |
+| `.github/CHANGELOG.md` | one entry per version, headed by its tag; the PR that bumps writes it |
 | `figures/` | figures, PDF only |
 | `notes/` | child `.tex` files of `notes.tex` |
-| `scripts/bump.sh` | version bump helper |
-| `scripts/arxiv_bundle.sh` | builds the submission bundle and proves it compiles alone |
-| `scripts/docs.py` | reads and writes `docs.toml` -- ids, roots, tags, versions |
-| `scripts/closure.py` | a document's dependency closure, read off its build record |
+| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `fetch_sources.sh` |
+| `.claude/skills/changelog/` | the procedure for recording a change and bumping |
 | `out/` | build output (gitignored) |
 
 Build with `latexmk main.tex` → `out/main.pdf`, `latexmk notes.tex` →
@@ -60,10 +67,14 @@ touches no document at all, such as a CI or README change, needs no bump.
 Before opening a PR:
 
 ```sh
-./scripts/bump.sh --affected patch "One line on what changed and why."
-./scripts/bump.sh notes patch "..."        # or name the document explicitly
-git add docs.toml CHANGELOG.md
+./.github/scripts/bump.sh --affected patch "One line on what changed and why."
+./.github/scripts/bump.sh notes patch "..."   # or name the document explicitly
+git add .github/docs.toml .github/CHANGELOG.md
 ```
+
+The **`changelog` skill** carries this procedure, including the two
+preconditions that are easy to miss. Reach for it rather than reconstructing
+the command.
 
 `--affected` computes the same set CI will demand. Two preconditions: build
 first, since it reads the records under `out/`, and commit your content changes
@@ -89,7 +100,7 @@ creation.** Consequences when several PRs are open at once:
   make its checks re-run — a base-branch update alone does not re-trigger them.
 - That merge conflicts on `docs.toml` every time. Resolve by keeping **your
   branch's higher value**, not `main`'s.
-- If the merge order changes, rebase onto `main` and re-run `./scripts/bump.sh`.
+- If the merge order changes, rebase onto `main` and re-run `./.github/scripts/bump.sh`.
 
 ## References — always go through doiget
 
@@ -101,7 +112,7 @@ citation:
 ```sh
 doiget fetch <doi|arxiv-id>   # PDF into the local store; copy it to refs/<bibkey>.pdf
 doiget cite  <doi|arxiv-id>   # BibTeX; paste into references.bib, rename the key
-./scripts/fetch_sources.sh    # fills refs/src/ with the full text of new entries
+./.github/scripts/fetch_sources.sh   # fills refs/src/ with the full text of new entries
 ```
 
 `refs/src/` is what makes checking a citation cheap. Prefer it to opening the
@@ -136,7 +147,7 @@ block.
 ## Before opening a PR
 
 1. `latexmk main.tex` and `latexmk notes.tex` both build clean.
-2. `./scripts/bump.sh --affected patch` is committed.
+2. `./.github/scripts/bump.sh --affected patch` is committed (see the `changelog` skill).
 3. New citations came from `doiget`, with their PDFs in `refs/`.
 4. `git diff --cached HEAD --stat` — read the **whole** list, not the head of
    it, and confirm nothing unintended (caches, scratch files, other people's

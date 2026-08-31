@@ -33,9 +33,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          for DOC in $(python3 scripts/docs.py ids); do
-            V="$(python3 scripts/docs.py version "$DOC")"
-            TAG="$(python3 scripts/docs.py tag "$DOC")"
+          for DOC in $(python3 .github/scripts/docs.py ids); do
+            V="$(python3 .github/scripts/docs.py version "$DOC")"
+            TAG="$(python3 .github/scripts/docs.py tag "$DOC")"
 
             if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
               echo "${DOC}: ${TAG} already exists — version was not bumped. No release."

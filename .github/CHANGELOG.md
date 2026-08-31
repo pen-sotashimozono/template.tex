@@ -4,17 +4,20 @@ One entry per released version, newest first, headed by the tag it ships
 under. Each document in `docs.toml` has its own ladder, so entries interleave:
 `main-v0.1.4` may sit above `notes-v0.3.0`. The PR that bumps a version adds
 its entry here, so the history is readable in-repo without downloading release
-artifacts. `./scripts/bump.sh <document> <kind> "summary"` prepends the stub.
+artifacts. `./.github/scripts/bump.sh <document> <kind> "summary"` prepends the
+stub; the `changelog` skill carries the whole procedure.
 
 To see what actually changed in a document between two of its versions:
 
 ```sh
 git diff main-v0.1.2 main-v0.1.3 -- '*.tex'     # text, greppable — prefer this
-./scripts/diff.sh main-v0.1.2 main-v0.1.3       # rendered latexdiff PDF, for reading
+./.github/scripts/diff.sh main-v0.1.2 main-v0.1.3   # rendered latexdiff PDF
 ```
 
 Entries below `0.0.10` predate per-document tags and are headed by a bare
-version; they belong to `main`.
+version; they belong to `main`. Paths quoted inside older entries are the paths
+of their time -- `scripts/` and `docs.toml` moved under `.github/` later, and
+those entries are left as written rather than rewritten to match.
 
 <!-- new entries go directly below this line -->
 

@@ -17,12 +17,12 @@ set -eu
 DOC="${1:?usage: $0 <document> [dest-dir]}"
 DEST="${2:-arxiv-src}"
 
-REPO="$(cd "$(dirname "$0")/.." && pwd)"
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$REPO"
 PY="${PYTHON:-python3}"
 command -v "$PY" >/dev/null 2>&1 || PY=python
 
-ROOT_TEX="$("$PY" scripts/docs.py root "$DOC")"
+ROOT_TEX="$("$PY" .github/scripts/docs.py root "$DOC")"
 STEM="$(basename "$ROOT_TEX" .tex)"
 
 command -v latexpand >/dev/null || { echo "latexpand not found (TeX Live)" >&2; exit 1; }

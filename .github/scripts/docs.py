@@ -38,8 +38,12 @@ import re
 import sys
 import tomllib
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
-MANIFEST = ROOT / "docs.toml"
+# .github/scripts/docs.py -> .github/ -> repository root. The manifest sits
+# beside this directory rather than at the top level: the root is kept for the
+# documents themselves, and everything that runs them lives under .github.
+HERE = pathlib.Path(__file__).resolve().parent
+ROOT = HERE.parent.parent
+MANIFEST = HERE.parent / "docs.toml"
 
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 TABLE_LINE = re.compile(r"^\s*\[([^\[\]]+)\]")

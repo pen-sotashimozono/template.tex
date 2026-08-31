@@ -15,9 +15,9 @@
 # build records under out/, so build first.
 set -eu
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DOCS="$ROOT/scripts/docs.py"
-CLOSURE="$ROOT/scripts/closure.py"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+DOCS="$ROOT/.github/scripts/docs.py"
+CLOSURE="$ROOT/.github/scripts/closure.py"
 PY="${PYTHON:-python3}"
 command -v "$PY" >/dev/null 2>&1 || PY=python
 
@@ -65,7 +65,7 @@ else
   DOC_LIST="$TARGET"
 fi
 
-LOG="$ROOT/CHANGELOG.md"
+LOG="$ROOT/.github/CHANGELOG.md"
 MARK='<!-- new entries go directly below this line -->'
 TOUCHED=''
 
