@@ -25,11 +25,9 @@
 #
 # Each root carries its own complete preamble -- the two documents repeat what
 # they share rather than reading a common file, so either one can be read and
-# shipped on its own. `arxiv` adds the .tex + .bbl + figures submission bundle
-# to the release; it is meaningless for a working notebook, so it defaults off.
+# shipped on its own.
 
 [main]
-arxiv   = true
 version = "0.0.11"
 
 [notes]

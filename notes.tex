@@ -77,8 +77,9 @@
 \section{Notes}
 \label{sec:notes}
 Working notebook. Keep child files in \texttt{notes/} and pull them in with
-\verb|\input{notes/<name>}|; the dependency closure picks them up from the
-build record, so a change in a child bumps this document and not the paper.
+\verb|\input|; the dependency closure picks them up from the build record, so a
+change in a child bumps this document and not the paper. Writing the path out
+here would be read by latexpand as a real inclusion, so it is left implied.
 
 This is a cite example\cite{example2024}: the bibliography is shared with
 \texttt{main.tex}, only its rendering differs.

@@ -72,15 +72,11 @@ document is one table and nothing else:
 
 ```toml
 [main]              # -> main.tex, out/main.pdf, tag main-v0.1.0
-arxiv   = true      # also package .tex + .bbl + figures for submission
 version = "0.1.0"
 
 [notes]             # -> notes.tex, out/notes.pdf, tag notes-v0.1.0
 version = "0.1.0"
 ```
-
-`arxiv` is off by default — a submission bundle is meaningless for a working
-notebook.
 
 Each root carries its own complete preamble rather than reading a shared file,
 so either document can be read and shipped on its own. Two differences are
@@ -159,8 +155,10 @@ The pipeline builds in parallel and attaches to the GitHub Release:
 The bundle is **flattened**, not copied: a root that pulls content in through
 `\input` is not self-contained, and arXiv sees only what is inside the tarball.
 `scripts/arxiv_bundle.sh` builds it and then compiles it in isolation, and CI
-runs that on every PR — an unflattened bundle fails on arXiv while every build
-here stays green, so nothing else would notice it break.
+runs that for every document on every PR — an unflattened bundle fails on arXiv
+while every build here stays green, so nothing else would notice it break. The
+check is really "is this document self-contained once flattened", which is
+worth knowing whether or not it is headed for arXiv.
 
 ## Supplementary material
 

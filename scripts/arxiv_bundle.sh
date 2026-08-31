@@ -28,7 +28,19 @@ STEM="$(basename "$ROOT_TEX" .tex)"
 command -v latexpand >/dev/null || { echo "latexpand not found (TeX Live)" >&2; exit 1; }
 command -v latexmk   >/dev/null || { echo "latexmk not found (TeX Live)" >&2; exit 1; }
 
+# Start from empty. Reusing the directory silently keeps whatever a previous
+# run left there -- a figure deleted from the document goes on shipping inside
+# the tarball, and a bundle built for one document inherits another's files.
+# The guard is because $DEST is an argument, and the next line removes it.
+case "$DEST" in
+  ""|.|..|/*|*..*)
+    echo "refusing to build the bundle in '$DEST'" >&2
+    exit 1
+    ;;
+esac
+rm -rf "$DEST"
 mkdir -p "$DEST"
+
 latexpand "$ROOT_TEX" > "$DEST/$STEM.tex"
 
 # arXiv runs bibtex only if asked; shipping the .bbl is the usual way round it.

@@ -35,7 +35,6 @@ jobs:
       document: ${{ steps.ver.outputs.document }}
       root: ${{ steps.ver.outputs.root }}
       stem: ${{ steps.ver.outputs.stem }}
-      arxiv: ${{ steps.ver.outputs.arxiv }}
       has-supplemental: ${{ steps.check.outputs.has-supplemental }}
     steps:
       - uses: actions/checkout@v7
@@ -66,7 +65,6 @@ jobs:
             echo "tag=${DOC}-v${VER}"
             echo "root=${ROOT}"
             echo "stem=$(basename "${ROOT}" .tex)"
-            echo "arxiv=$(python3 scripts/docs.py get "$DOC" arxiv)"
           } >> "$GITHUB_OUTPUT"
 
       - name: Create and push tag (workflow_dispatch only)
@@ -107,10 +105,7 @@ jobs:
           # not on the runner host. The script compiles the bundle in isolation
           # and fails the job if it does not build, so a release cannot ship a
           # tarball that arXiv will reject.
-          post_compile: |
-            if [ "${{ needs.setup.outputs.arxiv }}" = "true" ]; then
-              sh scripts/arxiv_bundle.sh "${{ needs.setup.outputs.document }}" arxiv-src
-            fi
+          post_compile: sh scripts/arxiv_bundle.sh "${{ needs.setup.outputs.document }}" arxiv-src
 
       - uses: actions/upload-artifact@v7
         with:
@@ -118,7 +113,6 @@ jobs:
           path: out/${{ needs.setup.outputs.stem }}.pdf
 
       - uses: actions/upload-artifact@v7
-        if: needs.setup.outputs.arxiv == 'true'
         with:
           name: arxiv-src
           path: arxiv-src/

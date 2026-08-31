@@ -55,7 +55,6 @@ jobs:
           ROOT="$(python3 scripts/docs.py root "$DOC")"
           echo "root=${ROOT}" >> "$GITHUB_OUTPUT"
           echo "stem=$(basename "$ROOT" .tex)" >> "$GITHUB_OUTPUT"
-          echo "arxiv=$(python3 scripts/docs.py get "$DOC" arxiv)" >> "$GITHUB_OUTPUT"
 
       # One shared .latexmkrc: every document is LuaLaTeX + BibTeX into out/,
       # and the stems differ, so out/main.* and out/notes.* never collide.
@@ -71,10 +70,10 @@ jobs:
           # The submission bundle is checked here, on every PR, rather than
           # only at release: an unflattened bundle fails on arXiv while every
           # build stays green, so nothing else would ever notice it break.
-          post_compile: |
-            if [ "${{ steps.doc.outputs.arxiv }}" = "true" ]; then
-              sh scripts/arxiv_bundle.sh "${{ matrix.doc }}" arxiv-check
-            fi
+          # Every document, not just the ones headed for arXiv -- the check is
+          # really "is this document self-contained once flattened", which is
+          # worth knowing either way.
+          post_compile: sh scripts/arxiv_bundle.sh "${{ matrix.doc }}" arxiv-check
 
       # Printed on every PR because the closure must not depend on who built:
       # git is case-sensitive and the Windows filesystem is not, so a locally
