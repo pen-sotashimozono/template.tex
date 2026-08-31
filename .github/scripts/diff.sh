@@ -2,9 +2,9 @@
 # Render a latexdiff between two revisions of one document, locally, with
 # \input children flattened. Usage:
 #
-#   ./scripts/diff.sh main-v0.1.2 main-v0.1.3   # between two tags/commits
-#   ./scripts/diff.sh main-v0.1.2               # tag -> working tree
-#   ./scripts/diff.sh -d notes HEAD~5           # pick the document explicitly
+#   ./.github/scripts/diff.sh main-v0.1.2 main-v0.1.3   # between two tags/commits
+#   ./.github/scripts/diff.sh main-v0.1.2               # tag -> working tree
+#   ./.github/scripts/diff.sh -d notes HEAD~5           # pick the document explicitly
 #
 # Output: out/diff-<from>..<to>.pdf
 #
