@@ -45,6 +45,7 @@ main.tex                    # paper, revtex4-2 two-column PRB
 notes.tex                   # working notebook, article
 supplemental.tex            # supplementary material (optional, create when needed)
 references.bib              # bibliography (BibTeX; entries from `doiget cite`)
+LICENSE                     # GitHub detects a licence only at the root
 figures/                    # figures in PDF format only
 notes/                      # child .tex files of notes.tex
 refs/                       # PDF of every cited work, as refs/<bibkey>.pdf
@@ -61,9 +62,11 @@ CLAUDE.md                   # working rules
 out/                        # build output (gitignored)
 ```
 
-`.latexmkrc` and `CLAUDE.md` cannot move: latexmk only auto-reads an rc file
-from the working directory, and Claude Code only reads `CLAUDE.md` from the
-repository root.
+`.latexmkrc`, `CLAUDE.md` and `LICENSE` cannot move. latexmk only auto-reads an
+rc file from the working directory; Claude Code only reads `CLAUDE.md` from the
+repository root; and GitHub detects a licence only at the root. `README.md` is
+different -- GitHub does resolve it from `.github/`, which is why it lives
+there.
 
 ## Revision markup
 

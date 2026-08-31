@@ -64,13 +64,13 @@ jobs:
           # The template's MIT licence covers the template, not the work written
           # with it. Left in place it would sit in a paper repository claiming
           # to license the paper, which is almost never what the author meant.
-          rm -f .github/LICENSE
+          rm -f LICENSE
 
           rm .github/workflows/Initialize.yml
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .github/docs.toml .github/CHANGELOG.md .github/LICENSE .github/workflows/Initialize.yml
+          git add .github/docs.toml .github/CHANGELOG.md LICENSE .github/workflows/Initialize.yml
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0

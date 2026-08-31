@@ -26,9 +26,12 @@ them -- workflows, scripts, the manifest, the changelog, the licence -- lives
 under `.github/`, and the skills under `.claude/`. Both are hidden, so opening
 the repository to write shows the writing.
 
-`.latexmkrc` and `CLAUDE.md` are the exceptions and cannot move: latexmk only
-auto-reads an rc file from the working directory, and Claude Code only reads
-`CLAUDE.md` from the repository root.
+Three files are exceptions and cannot move. latexmk only auto-reads an rc file
+from the working directory, so `.latexmkrc` sits where latexmk is run. Claude
+Code only reads `CLAUDE.md` from the repository root. And GitHub detects a
+licence only at the root -- `.github/LICENSE` is served as an ordinary file and
+the repository shows no licence at all, which was measured rather than
+assumed after trying it.
 
 | Path | Contents |
 |---|---|
