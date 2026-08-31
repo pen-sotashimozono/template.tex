@@ -2,12 +2,17 @@
 
 LaTeX template for physics papers in APS/PRB style, with a full CI/CD pipeline on GitHub Actions.
 
+Two root documents out of the box, versioned and released independently: the
+paper in **revtex4-2**, and a working notebook in **article** — one column and a
+wide measure, because long derivations are unreadable in a PRB two-column.
+
 ## Features
 
-- **revtex4-2** with PRB two-column layout
+- **revtex4-2** with PRB two-column layout, plus an **article** notebook sharing the same preamble
 - **LuaLaTeX** engine via latexmk
 - **Automated release pipeline**: compile each document, latexdiff against its previous version, and supplementary material on every semver tag
 - **Multiple root documents**: `docs.toml` lists them; the CI matrix, tags and releases are generated from it
+- **Closure-driven version checks**: a PR bumps exactly the documents whose `\input` children or bibliography it touched
 - **arXiv bundle**: auto-packaged `.tex` + `.bbl` + figures zip ready for submission
 - **DOI verification**: every reference in `references.bib` is validated against Crossref/arXiv via [doiget](https://github.com/sotashimozono/doiget)
 - **Dependabot**: GitHub Actions versions updated monthly
@@ -32,7 +37,11 @@ The local build reads `.latexmkrc` and outputs to `out/`.
 
 ```
 docs.toml           # root documents and their versions -- the version authority
-main.tex            # paper source (single file)
+main.tex            # paper, revtex4-2 two-column PRB
+notes.tex           # working notebook, article
+styles/common.tex   # preamble shared by both documents
+styles/revtex.tex   # revtex-only preamble
+styles/article.tex  # article-side equivalents of what revtex provides
 supplemental.tex    # supplementary material (optional, create when needed)
 references.bib      # bibliography (BibTeX; entries from `doiget cite`)
 refs/               # PDF of every cited work, as refs/<bibkey>.pdf
@@ -40,13 +49,13 @@ refs/src/           # full text of each reference for grepping (arXiv .tex, else
 CHANGELOG.md        # one entry per version, written by the PR that bumps it
 scripts/            # bump.sh, docs.py, closure.py, diff.sh, fetch_sources.sh
 figures/            # figures in PDF format only
-notes/              # scratch notes, not compiled
+notes/              # child .tex files of notes.tex
 .latexmkrc          # build recipe (LuaLaTeX + BibTeX, out/ dir)
 ```
 
 ## Revision markup
 
-Four commands are defined in `main.tex` for tracking changes during review:
+Four commands are defined in `styles/common.tex`, so they work in both documents:
 
 | Command | Color | Purpose |
 |---|---|---|
@@ -65,11 +74,18 @@ document is one table and nothing else:
 
 ```toml
 [main]              # -> main.tex, out/main.pdf, tag main-v0.1.0
+style   = "revtex"
+arxiv   = true      # also package .tex + .bbl + figures for submission
 version = "0.1.0"
 
 [notes]             # -> notes.tex, out/notes.pdf, tag notes-v0.1.0
+style   = "article"
 version = "0.1.0"
 ```
+
+`style` names the preamble under `styles/` that the root reads; CI checks the
+root really does `\input` it, so the declaration cannot drift. `arxiv` is off by
+default — a submission bundle is meaningless for a working notebook.
 
 Set `root` in a table if the file is not `<id>.tex`. A table is a document iff
 it carries `version`. There is no `VERSION` file: `docs.toml` is the only
@@ -79,14 +95,20 @@ A single `.latexmkrc` serves every document — all of them are LuaLaTeX +
 BibTeX into `out/`, and the stems differ, so `out/main.*` and `out/notes.*`
 never collide.
 
-### Every PR must bump the version
+### Every PR bumps the documents it touches — and only those
 
-`VersionCheck.yml` fails a PR whose version is unchanged, and fails a bump that
-is not a single semver step. Bump with:
+The `version-check` job asks `scripts/closure.py` which documents this branch
+actually changed, through their `\input` children and `references.bib` rather
+than the root file alone, and requires a single semver step for exactly those.
+A document the PR did not touch must stay put. A PR that touches no document at
+all — CI, README, tooling — needs no bump.
+
+Editing `styles/common.tex` bumps both documents, since it is in both closures
+and changes both PDFs.
 
 ```sh
-./scripts/bump.sh main patch "One line on what changed."   # or minor / major
-./scripts/bump.sh --affected patch "..."                   # every document this branch touched
+./scripts/bump.sh --affected patch "One line on what changed."   # or minor / major
+./scripts/bump.sh notes patch "..."                              # or name it explicitly
 ```
 
 | Command | Example: 1.2.3 → |
@@ -95,10 +117,10 @@ is not a single semver step. Bump with:
 | `./scripts/bump.sh main minor` | 1.3.0 |
 | `./scripts/bump.sh main major` | 2.0.0 |
 
-`--affected` asks `scripts/closure.py` which documents this branch actually
-changed — through their `\input` children and `references.bib`, not just the
-root file — and bumps exactly those. It reads the build records under `out/`,
-so build first.
+`--affected` computes the same set CI will demand. Two preconditions: build
+first, since it reads the records under `out/`, and commit your content changes
+first, since the comparison is `git diff main...HEAD` and an uncommitted file is
+invisible to it.
 
 The optional summary is prepended to `CHANGELOG.md` under the tag the bump will
 release, and becomes the release body.

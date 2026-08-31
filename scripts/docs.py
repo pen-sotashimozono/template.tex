@@ -22,6 +22,7 @@ Usage:
     python scripts/docs.py root <id>                    # root .tex path
     python scripts/docs.py version <id>                 # current version
     python scripts/docs.py tag <id>                     # <id>-v<version>
+    python scripts/docs.py get <id> <key>               # a raw key, empty if absent
     python scripts/docs.py next <id> <patch|minor|major>
     python scripts/docs.py bump <id> <patch|minor|major>
     python scripts/docs.py init <version>               # every version -> X
@@ -176,6 +177,9 @@ def main() -> int:
         ("tag", "print a document's release tag"),
     ):
         sub.add_parser(name, help=help_text).add_argument("doc")
+    p_get = sub.add_parser("get", help="print one key of a document")
+    p_get.add_argument("doc")
+    p_get.add_argument("key")
     for name, help_text in (
         ("next", "print the version one step up, without writing"),
         ("bump", "raise a document's version by one step"),
@@ -211,6 +215,16 @@ def main() -> int:
         print(docs[args.doc]["version"])
     elif args.command == "tag":
         print(f"{args.doc}-v{docs[args.doc]['version']}")
+    elif args.command == "get":
+        # Shell-shaped output: absent is empty, booleans are true/false rather
+        # than Python's True/False, so `[ "$(... get x arxiv)" = true ]` works.
+        value = docs[args.doc].get(args.key)
+        if value is None:
+            print("")
+        elif isinstance(value, bool):
+            print("true" if value else "false")
+        else:
+            print(value)
     elif args.command == "next":
         print(next_version(docs[args.doc]["version"], args.kind, args.doc))
     elif args.command == "bump":

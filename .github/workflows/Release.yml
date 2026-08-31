@@ -35,6 +35,7 @@ jobs:
       document: ${{ steps.ver.outputs.document }}
       root: ${{ steps.ver.outputs.root }}
       stem: ${{ steps.ver.outputs.stem }}
+      arxiv: ${{ steps.ver.outputs.arxiv }}
       has-supplemental: ${{ steps.check.outputs.has-supplemental }}
     steps:
       - uses: actions/checkout@v7
@@ -65,6 +66,7 @@ jobs:
             echo "tag=${DOC}-v${VER}"
             echo "root=${ROOT}"
             echo "stem=$(basename "${ROOT}" .tex)"
+            echo "arxiv=$(python3 scripts/docs.py get "$DOC" arxiv)"
           } >> "$GITHUB_OUTPUT"
 
       - name: Create and push tag (workflow_dispatch only)
@@ -108,6 +110,7 @@ jobs:
           path: out/${{ needs.setup.outputs.stem }}.pdf
 
       - name: Package arXiv bundle
+        if: needs.setup.outputs.arxiv == 'true'
         env:
           STEM: ${{ needs.setup.outputs.stem }}
           ROOT: ${{ needs.setup.outputs.root }}
@@ -118,6 +121,7 @@ jobs:
           find figures -name "*.pdf" -exec cp {} arxiv-src/ \; 2>/dev/null || true
 
       - uses: actions/upload-artifact@v7
+        if: needs.setup.outputs.arxiv == 'true'
         with:
           name: arxiv-src
           path: arxiv-src/
@@ -243,11 +247,22 @@ jobs:
           TAG: ${{ needs.setup.outputs.tag }}
           STEM: ${{ needs.setup.outputs.stem }}
         run: |
+          set -euo pipefail
           mkdir release
-          [ -f "dl/document/${STEM}.pdf" ]          && mv "dl/document/${STEM}.pdf"          "release/${TAG}.pdf"
-          [ -f dl/diff/diff.pdf ]                  && mv dl/diff/diff.pdf                  "release/diff-${TAG}.pdf"
-          [ -f dl/supplementary/supplemental.pdf ] && mv dl/supplementary/supplemental.pdf "release/supplemental-${TAG}.pdf"
-          [ -d dl/arxiv-src ]                      && (cd dl/arxiv-src && zip "../../release/arxiv-bundle-${TAG}.zip" ./*)
+          if [ -f "dl/document/${STEM}.pdf" ]; then
+            mv "dl/document/${STEM}.pdf" "release/${TAG}.pdf"
+          fi
+          if [ -f dl/diff/diff.pdf ]; then
+            mv dl/diff/diff.pdf "release/diff-${TAG}.pdf"
+          fi
+          if [ -f dl/supplementary/supplemental.pdf ]; then
+            mv dl/supplementary/supplemental.pdf "release/supplemental-${TAG}.pdf"
+          fi
+          if [ -d dl/arxiv-src ]; then
+            (cd dl/arxiv-src && zip "../../release/arxiv-bundle-${TAG}.zip" ./*)
+          fi
+          echo "Assets:"
+          ls -1 release/
 
       - uses: softprops/action-gh-release@v3
         with:

@@ -1,0 +1,27 @@
+% article side of the preamble: the plain equivalents of what revtex4-2 gives
+% for free, so the same body markup compiles under either class.
+%
+% apsrev4-2.bst is revtex-only, so the bibliography goes through natbib with a
+% stock style. references.bib and the doiget / VerifyReferences flow are
+% untouched; only the rendered reference list differs.
+
+\usepackage[margin=1in]{geometry}
+\usepackage[numbers,sort&compress]{natbib}
+\bibliographystyle{unsrtnat}
+
+% \affiliation and \email are revtex-only. Collect them and print them under
+% the author block, so a document can carry the same title markup either way.
+\makeatletter
+\newcommand{\@affiliations}{}
+\newcommand{\affiliation}[1]{\g@addto@macro\@affiliations{\ \small\itshape #1}}
+\newcommand{\email}[1]{\g@addto@macro\@affiliations{\ \small\texttt{#1}}}
+\renewcommand{\@maketitle}{%
+  \begin{center}%
+    {\LARGE\bfseries \@title \par}\vskip 1em%
+    {\large \@author \@affiliations \par}\vskip 1em%
+    {\large \@date \par}%
+  \end{center}\par\vskip 1.5em}
+\makeatother
+
+% revtex4-2 defines this environment; article does not.
+\newenvironment{acknowledgments}{\section*{Acknowledgments}}{}

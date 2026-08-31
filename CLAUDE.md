@@ -1,7 +1,8 @@
 # Working rules for this repository
 
-A LaTeX paper repository. `main.tex` is the paper, `references.bib` is its
-bibliography, and `refs/` holds the PDF of every cited work. CI enforces two
+A LaTeX paper repository carrying two root documents: `main.tex` is the paper
+in revtex4-2, `notes.tex` is the working notebook in article. `references.bib`
+is the bibliography they share, and `refs/` holds the PDF of every cited work. CI enforces two
 disciplines: **one version bump per PR** and **resolvable references**.
 
 `docs.toml` lists the root documents and is the only version authority. The
@@ -10,41 +11,66 @@ root file, the build output, the release tag:
 
     [main]  ->  main.tex  ->  out/main.pdf  ->  tag main-v0.1.0
 
-so a second root document is one table, and the CI matrix, the release and the
-tag all pick it up unchanged.
+so a third root document would be one table, and the CI matrix, the release and
+the tag all pick it up unchanged.
+
+`style` names the preamble under `styles/` that the root reads. CI checks the
+root really does `\input` it, so the declaration cannot drift.
 
 ## Layout
 
 | Path | Contents |
 |---|---|
-| `main.tex` | paper source; child `.tex` files are pulled in with `\input` |
+| `main.tex` | paper, revtex4-2 two-column PRB; children pulled in with `\input` |
+| `notes.tex` | working notebook, article; one column, wide measure |
+| `styles/common.tex` | preamble shared by both — maths, hyperref, graphics, revision macros |
+| `styles/revtex.tex` | revtex-only preamble |
+| `styles/article.tex` | article-side equivalents of what revtex provides |
 | `references.bib` | bibliography — entries come from `doiget cite`, never hand-written |
 | `refs/` | one PDF per bibliography key: `refs/<bibkey>.pdf` |
 | `refs/src/` | full text of each reference for grepping — arXiv LaTeX source (`.tex`) where available, PDF extraction (`.txt`) otherwise |
 | `docs.toml` | root documents and their versions -- the version authority |
 | `CHANGELOG.md` | one entry per version, headed by its tag; the PR that bumps writes it |
 | `figures/` | figures, PDF only |
-| `notes/` | working notes |
+| `notes/` | child `.tex` files of `notes.tex` |
 | `scripts/bump.sh` | version bump helper |
 | `scripts/docs.py` | reads and writes `docs.toml` -- ids, roots, tags, versions |
 | `scripts/closure.py` | a document's dependency closure, read off its build record |
 | `out/` | build output (gitignored) |
 
-Build with `latexmk main.tex` → `out/main.pdf`.
+Build with `latexmk main.tex` → `out/main.pdf`, `latexmk notes.tex` →
+`out/notes.pdf`. One `.latexmkrc` serves both: LuaLaTeX + BibTeX into `out/`,
+and the stems differ so nothing collides.
 
-## Version discipline — every PR bumps by exactly one step
+**Do not load `natbib` from `styles/common.tex`.** revtex4-2 bundles its own and
+they clash; that is why the bibliography setup sits in `styles/article.tex`.
+`\affiliation`, `\email` and the `acknowledgments` environment are revtex-only
+too, and `styles/article.tex` reimplements them so the same body markup
+compiles under either class.
 
-`VersionCheck.yml` fails a PR whose `docs.toml` version is unchanged, and fails
-a bump that is not a single semver step. Before opening a PR:
+## Version discipline — bump every document the PR touches, and only those
+
+The `version-check` job in `latex-ci.yml` asks `closure.py` which documents this
+branch actually changed — through their `\input` children and `references.bib`,
+not the root file alone — and requires a single semver step for exactly those.
+A document the PR did not touch must stay put; moving it is an error. A PR that
+touches no document at all, such as a CI or README change, needs no bump.
+
+Because `styles/common.tex` is in both closures, editing it bumps both
+documents. That is intended: it changes both PDFs.
+
+Before opening a PR:
 
 ```sh
-./scripts/bump.sh main patch "One line on what changed and why."
-./scripts/bump.sh --affected patch "..."   # or: every document this branch touched
+./scripts/bump.sh --affected patch "One line on what changed and why."
+./scripts/bump.sh notes patch "..."        # or name the document explicitly
 git add docs.toml CHANGELOG.md
 ```
 
-`--affected` asks `closure.py` which documents this branch actually changed and
-bumps exactly those. It reads the build records under `out/`, so build first.
+`--affected` computes the same set CI will demand. Two preconditions: build
+first, since it reads the records under `out/`, and commit your content changes
+first, since the comparison is `git diff main...HEAD` and an uncommitted file is
+invisible to it.
 
 The summary becomes the `CHANGELOG.md` entry and the release body, so the
 history is readable in-repo. Omitting it leaves a `TODO` to fill in.
@@ -111,9 +137,8 @@ block.
 
 ## Before opening a PR
 
-1. `latexmk main.tex` builds clean — every root in `docs.toml`, if there are
-   several.
-2. `./scripts/bump.sh <document> patch` (or minor/major) is committed.
+1. `latexmk main.tex` and `latexmk notes.tex` both build clean.
+2. `./scripts/bump.sh --affected patch` is committed.
 3. New citations came from `doiget`, with their PDFs in `refs/`.
 4. `git diff --cached HEAD --stat` — read the **whole** list, not the head of
    it, and confirm nothing unintended (caches, scratch files, other people's

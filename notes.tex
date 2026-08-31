@@ -1,0 +1,56 @@
+%!LW recipe = lualatex
+
+\documentclass[11pt,a4paper]{article}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%% Preamble %%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% One column and a wide measure: long derivations are unreadable in the PRB
+% two-column layout that main.tex uses. Same shared preamble, different class.
+\input{styles/common}
+\input{styles/article}
+
+% ==============================================================================
+\begin{document}
+% ==============================================================================
+
+\title{Working notes}
+
+\author{First Author}
+\email{author@example.com}
+\affiliation{Department, University, City, Country}
+
+\date{\today}
+
+\maketitle
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%% Notes %%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Notes}
+\label{sec:notes}
+Working notebook. Keep child files in \texttt{notes/} and pull them in with
+\verb|\input{notes/<name>}|; the dependency closure picks them up from the
+build record, so a change in a child bumps this document and not the paper.
+
+This is a cite example\cite{example2024}: the bibliography is shared with
+\texttt{main.tex}, only its rendering differs.
+
+\begin{equation}
+  \Braket{\psi | \bm{H} | \psi} = \sum_{n} E_n \left| c_n \right|^2 .
+\end{equation}
+
+The revision markup from \texttt{styles/common.tex} works here as well:
+\sh{author edit}, \ch{collaborator edit}, \rev{reviewer response},
+\remove{deletion}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%% Acknowledgments %%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{acknowledgments}
+  Acknowledgments.
+\end{acknowledgments}
+
+\bibliography{references}
+
+\end{document}

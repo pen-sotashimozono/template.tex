@@ -1,0 +1,27 @@
+% Preamble shared by every document, whatever its class.
+%
+% Nothing class-specific belongs here. revtex4-2 bundles its own natbib, so
+% loading natbib from this file would clash with it -- the bibliography setup
+% lives in styles/article.tex instead.
+
+% ---- Mathematics -------------------------------------------------------------
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{braket}
+
+% ---- Hyperlinks --------------------------------------------------------------
+\usepackage[colorlinks=true,citecolor=blue,linkcolor=blue,filecolor=blue,urlcolor=blue]{hyperref}
+
+% ---- Graphics ----------------------------------------------------------------
+\usepackage{graphicx} % luatex driver, auto-detected under LuaLaTeX
+\graphicspath{{figures/}}
+
+% ---- Revision markup (comment out before final submission) -------------------
+\usepackage{xcolor}
+\usepackage[normalem]{ulem}
+\newcommand{\sh}[1]{{\color{green}{#1}}}   % author edit
+\newcommand{\ch}[1]{{\color{blue}{#1}}}    % collaborator edit
+\newcommand{\remove}[1]{\sout{#1}}         % deletion
+\newcommand{\rev}[1]{{\color{red}{#1}}}    % response to reviewer

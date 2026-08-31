@@ -1,8 +1,15 @@
 name: LaTeX CI
 
-# Builds every root document in docs.toml. The matrix is generated from the
-# manifest rather than written here, so adding a document is one table in
-# docs.toml and nothing else.
+# Builds every root document in docs.toml and, on a PR, validates the version
+# ladder against what the build says actually changed.
+#
+# The matrix is generated from the manifest rather than written here, so adding
+# a document is one table in docs.toml and nothing else.
+#
+# The version check lives in this workflow rather than its own because it needs
+# the build records latexmk writes (out/<stem>.fls and out/<stem>.fdb_latexmk).
+# Those are what say which files a document actually depends on; without them
+# the check can only compare the root file and misses every \input child.
 
 on:
   push:
@@ -49,6 +56,30 @@ jobs:
           echo "root=${ROOT}" >> "$GITHUB_OUTPUT"
           echo "stem=$(basename "$ROOT" .tex)" >> "$GITHUB_OUTPUT"
 
+      # docs.toml declares the style; this is what stops that declaration from
+      # drifting away from what the root actually reads. A key nothing checks
+      # is worse than no key -- it reads as fact and quietly stops being one.
+      - name: Check the root reads the style docs.toml declares
+        env:
+          DOC: ${{ matrix.doc }}
+          ROOT: ${{ steps.doc.outputs.root }}
+        run: |
+          set -euo pipefail
+          STYLE="$(python3 scripts/docs.py get "$DOC" style)"
+          if [ -z "$STYLE" ]; then
+            echo "${DOC}: no style declared, nothing to check."
+            exit 0
+          fi
+          if [ ! -f "styles/${STYLE}.tex" ]; then
+            echo "::error::${DOC}: docs.toml says style=\"${STYLE}\" but styles/${STYLE}.tex does not exist."
+            exit 1
+          fi
+          if ! grep -qF "input{styles/${STYLE}}" "$ROOT"; then
+            echo "::error::${DOC}: docs.toml says style=\"${STYLE}\" but ${ROOT} does not \input{styles/${STYLE}}."
+            exit 1
+          fi
+          echo "${DOC}: ${ROOT} reads styles/${STYLE}.tex, as declared."
+
       # One shared .latexmkrc: every document is LuaLaTeX + BibTeX into out/,
       # and the stems differ, so out/main.* and out/notes.* never collide.
       - name: Compile LaTeX
@@ -61,11 +92,9 @@ jobs:
             lualatex --version
             bibtex --version
 
-      # Reads the build record latexmk just wrote. Not a gate yet -- it fails
-      # only on a missing record or a malformed docs.toml. It runs here because
-      # the closure must not depend on who built: git is case-sensitive and the
-      # Windows filesystem is not, so a locally computed closure can differ from
-      # this one. Printing it on every PR keeps that visible.
+      # Printed on every PR because the closure must not depend on who built:
+      # git is case-sensitive and the Windows filesystem is not, so a locally
+      # computed closure can differ from this one.
       - name: Print document closure
         run: python3 scripts/closure.py list "${{ matrix.doc }}"
 
@@ -74,3 +103,56 @@ jobs:
           name: ${{ matrix.doc }}-pdf
           path: out/${{ steps.doc.outputs.stem }}.pdf
           retention-days: 14
+
+      # Handed to version-check below, which cannot recompute them without
+      # running every build a second time.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: build-record-${{ matrix.doc }}
+          path: |
+            out/${{ steps.doc.outputs.stem }}.fls
+            out/${{ steps.doc.outputs.stem }}.fdb_latexmk
+          retention-days: 1
+
+  version-check:
+    name: Validate semver bump
+    needs: [documents, build]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: build-record-*
+          path: records/
+          merge-multiple: true
+
+      - name: Bump exactly the documents this PR touched
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cp records/* out/
+
+          # A full ref, not a shallow one: the closure diff needs a merge base.
+          git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          BASE="origin/${BASE_REF}"
+          git show "${BASE}:docs.toml" > base-docs.toml 2>/dev/null || : > base-docs.toml
+
+          # Which documents did this branch actually change, through their
+          # \input children and references.bib rather than the root file alone?
+          AFFECTED="$(python3 scripts/closure.py affected --base "$BASE")"
+          if [ -z "$AFFECTED" ]; then
+            echo "No document's dependency closure changed — no bump required."
+          else
+            echo "Affected documents: $(echo "$AFFECTED" | tr '\n' ' ')"
+          fi
+
+          # Unquoted on purpose: each id is its own argument, and an empty
+          # AFFECTED must reach check-bump as "--only" with zero ids, meaning
+          # nothing may bump -- not as "no --only", which would demand all of them.
+          python3 scripts/docs.py check-bump --base base-docs.toml --only $AFFECTED
