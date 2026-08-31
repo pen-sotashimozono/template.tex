@@ -18,6 +18,11 @@ version; they belong to `main`.
 
 <!-- new entries go directly below this line -->
 
+## notes-v0.0.11 — 2026-08-31
+
+First release of the working notebook: article class, one column, self-contained
+preamble, sharing only `references.bib` with the paper.
+
 ## main-v0.0.11 — 2026-08-31
 
 docs.toml is now the only version authority; VERSION is gone and tags are per document.

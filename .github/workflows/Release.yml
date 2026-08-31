@@ -101,21 +101,16 @@ jobs:
           root_file: ${{ needs.setup.outputs.root }}
           latexmk_use_lualatex: true
           pre_compile: mkdir -p out
+          # Runs inside the container because latexpand and latexmk live there,
+          # not on the runner host. The script compiles the bundle in isolation
+          # and fails the job if it does not build, so a release cannot ship a
+          # tarball that arXiv will reject.
+          post_compile: sh scripts/arxiv_bundle.sh "${{ needs.setup.outputs.document }}" arxiv-src
 
       - uses: actions/upload-artifact@v7
         with:
           name: document
           path: out/${{ needs.setup.outputs.stem }}.pdf
-
-      - name: Package arXiv bundle
-        env:
-          STEM: ${{ needs.setup.outputs.stem }}
-          ROOT: ${{ needs.setup.outputs.root }}
-        run: |
-          mkdir arxiv-src
-          cp "$ROOT" arxiv-src/
-          cp "out/${STEM}.bbl" arxiv-src/ 2>/dev/null || true
-          find figures -name "*.pdf" -exec cp {} arxiv-src/ \; 2>/dev/null || true
 
       - uses: actions/upload-artifact@v7
         with:
@@ -243,11 +238,22 @@ jobs:
           TAG: ${{ needs.setup.outputs.tag }}
           STEM: ${{ needs.setup.outputs.stem }}
         run: |
+          set -euo pipefail
           mkdir release
-          [ -f "dl/document/${STEM}.pdf" ]          && mv "dl/document/${STEM}.pdf"          "release/${TAG}.pdf"
-          [ -f dl/diff/diff.pdf ]                  && mv dl/diff/diff.pdf                  "release/diff-${TAG}.pdf"
-          [ -f dl/supplementary/supplemental.pdf ] && mv dl/supplementary/supplemental.pdf "release/supplemental-${TAG}.pdf"
-          [ -d dl/arxiv-src ]                      && (cd dl/arxiv-src && zip "../../release/arxiv-bundle-${TAG}.zip" ./*)
+          if [ -f "dl/document/${STEM}.pdf" ]; then
+            mv "dl/document/${STEM}.pdf" "release/${TAG}.pdf"
+          fi
+          if [ -f dl/diff/diff.pdf ]; then
+            mv dl/diff/diff.pdf "release/diff-${TAG}.pdf"
+          fi
+          if [ -f dl/supplementary/supplemental.pdf ]; then
+            mv dl/supplementary/supplemental.pdf "release/supplemental-${TAG}.pdf"
+          fi
+          if [ -d dl/arxiv-src ]; then
+            (cd dl/arxiv-src && zip "../../release/arxiv-bundle-${TAG}.zip" ./*)
+          fi
+          echo "Assets:"
+          ls -1 release/
 
       - uses: softprops/action-gh-release@v3
         with:
