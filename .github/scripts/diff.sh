@@ -2,13 +2,13 @@
 # Render a latexdiff between two revisions of one document, locally, with
 # \input children flattened. Usage:
 #
-#   ./.github/scripts/diff.sh main-v0.1.2 main-v0.1.3   # between two tags/commits
-#   ./.github/scripts/diff.sh main-v0.1.2               # tag -> working tree
+#   ./.github/scripts/diff.sh v0.1.2-main v0.1.3-main   # between two tags/commits
+#   ./.github/scripts/diff.sh v0.1.2-main               # tag -> working tree
 #   ./.github/scripts/diff.sh -d notes HEAD~5           # pick the document explicitly
 #
 # Output: out/diff-<from>..<to>.pdf
 #
-# The document is taken from the from-revision when it is a <id>-v<version>
+# The document is taken from the from-revision when it is a v<version>-<id>
 # tag, since that is the usual way in; otherwise -d, or the single document in
 # docs.toml when there is only one.
 #
@@ -18,7 +18,7 @@
 # first.
 #
 # To read changes as an agent, prefer plain text:
-#   git diff main-v0.1.2 main-v0.1.3 -- '*.tex'
+#   git diff v0.1.2-main v0.1.3-main -- '*.tex'
 # This script is for a rendered, human-readable diff.
 set -eu
 
@@ -38,8 +38,8 @@ TO="${2:-}"
 
 IDS="$("$PY" .github/scripts/docs.py ids)"
 if [ -z "$DOC" ]; then
-  # main-v0.1.2 -> main, but only if that is really a document
-  CANDIDATE="${FROM%-v*}"
+  # v0.1.2-main -> main, but only if that is really a document
+  CANDIDATE="${FROM##*-}"
   for ID in $IDS; do
     if [ "$ID" = "$CANDIDATE" ]; then
       DOC="$ID"

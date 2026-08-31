@@ -70,7 +70,7 @@ TOUCHED=''
 for DOC in $DOC_LIST; do
   "$PY" "$DOCS" bump "$DOC" "$KIND"
   NEW="$("$PY" "$DOCS" version "$DOC")"
-  TAG="${DOC}-v${NEW}"
+  TAG="v${NEW}-${DOC}"
   TOUCHED="${TOUCHED} ${TAG}"
 
   # A changelog stub per document, headed by the tag it will release under, so

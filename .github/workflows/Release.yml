@@ -6,7 +6,7 @@ name: Release
 
 on:
   push:
-    tags: ["*-v[0-9]*.[0-9]*.[0-9]*"]
+    tags: ["v[0-9]*.[0-9]*.[0-9]*-*"]
   workflow_dispatch:
     inputs:
       document:
@@ -20,7 +20,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.event_name == 'workflow_dispatch' && format('{0}-v{1}', inputs.document, inputs.version) || github.ref_name }}
+  group: release-${{ github.event_name == 'workflow_dispatch' && format('v{0}-{1}', inputs.version, inputs.document) || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -46,8 +46,11 @@ jobs:
             DOC="${{ inputs.document }}"
             VER="${{ inputs.version }}"
           else
-            DOC="${GITHUB_REF_NAME%-v*}"
-            VER="${GITHUB_REF_NAME##*-v}"
+            # v0.0.12-main -> VER=0.0.12, DOC=main. The version cannot hold a
+            # hyphen, so the last one always separates the two.
+            DOC="${GITHUB_REF_NAME##*-}"
+            VER="${GITHUB_REF_NAME%-*}"
+            VER="${VER#v}"
           fi
 
           EXPECTED="$(python3 .github/scripts/docs.py version "$DOC")"
@@ -59,7 +62,7 @@ jobs:
           ROOT="$(python3 .github/scripts/docs.py root "$DOC")"
           {
             echo "document=${DOC}"
-            echo "tag=${DOC}-v${VER}"
+            echo "tag=v${VER}-${DOC}"
             echo "root=${ROOT}"
             echo "stem=$(basename "${ROOT}" .tex)"
           } >> "$GITHUB_OUTPUT"
@@ -132,7 +135,7 @@ jobs:
           DOC: ${{ needs.setup.outputs.document }}
           TAG: ${{ needs.setup.outputs.tag }}
         run: |
-          PREV=$(git tag --list "${DOC}-v*" --sort=-v:refname | grep -v "^${TAG}$" | head -1)
+          PREV=$(git tag --list "v*-${DOC}" --sort=-v:refname | grep -v "^${TAG}$" | head -1)
           echo "prev=${PREV}" >> "$GITHUB_OUTPUT"
 
       # Materialise the previous revision as a directory tree (git only, no TeX
@@ -209,7 +212,7 @@ jobs:
           TAG: ${{ needs.setup.outputs.tag }}
         run: |
           set -euo pipefail
-          PREV=$(git tag --list "${DOC}-v*" --sort=-v:refname | grep -v "^${TAG}$" | head -1 || true)
+          PREV=$(git tag --list "v*-${DOC}" --sort=-v:refname | grep -v "^${TAG}$" | head -1 || true)
           {
             if [ -f .github/CHANGELOG.md ]; then
               awk -v v="## ${TAG} " '

@@ -2,7 +2,7 @@
 #
 # The table name is the document id, and everything mechanical follows from it:
 #
-#     [main]  ->  root main.tex, build out/main.pdf, release tag main-v0.1.0
+#     [main]  ->  root main.tex, build out/main.pdf, release tag v0.1.0-main
 #
 # so a document is added by adding a table, and nothing else has to be told
 # about it. Set `root` only when the file is not <id>.tex.
