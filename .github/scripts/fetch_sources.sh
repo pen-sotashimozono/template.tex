@@ -24,16 +24,8 @@ cd "$ROOT"
 command -v doiget >/dev/null || { echo "doiget not found" >&2; exit 1; }
 mkdir -p refs/src
 
-# key<TAB>eprint<TAB>doi, one line per entry ('-' when the field is absent).
-# tr -d '\r' matters: a CR left by a Windows checkout ends up inside the DOI and
-# every lookup fails.
-awk '
-  /^@/ { if (key != "") print key "\t" ep "\t" doi; key=""; ep="-"; doi="-";
-         if (match($0, /\{[^,]+,/)) { key=substr($0, RSTART+1, RLENGTH-2); gsub(/[ \t]/, "", key) } }
-  /eprint[ \t]*=/ { if (match($0, /\{[^}]*\}/)) ep=substr($0, RSTART+1, RLENGTH-2) }
-  /doi[ \t]*=/    { if (match($0, /\{[^}]*\}/)) doi=substr($0, RSTART+1, RLENGTH-2) }
-  END { if (key != "") print key "\t" ep "\t" doi }
-' references.bib | tr -d '\r' > "$ROOT/.fetch_sources.tmp"
+# key<TAB>eprint<TAB>doi per entry; the parse is shared with refs_sync.sh.
+awk -f .github/scripts/bibentries.awk references.bib | tr -d '\015' > "$ROOT/.fetch_sources.tmp"
 
 got=0; fell_back=0; missing=0
 # Read through fd 3: doiget would otherwise consume the loop's stdin.

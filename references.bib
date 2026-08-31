@@ -1,8 +1,10 @@
-% Entries are produced by `doiget cite <doi|arxiv-id>` and pasted here with the
-% key renamed; the matching PDF goes to refs/<bibkey>.pdf via `doiget fetch`.
+% Entries come from `doiget cite <doi|arxiv-id>`, pasted verbatim with only the
+% key renamed. Then ./.github/scripts/refs_sync.sh fills refs/<bibkey>.pdf from
+% the doiget store, and fetch_sources.sh fills refs/src/ with greppable text.
+%
 % Never hand-write an identifier: VerifyReferences.yml resolves every DOI and
 % arXiv id against Crossref/arXiv, and a guessed DOI usually resolves to a
-% different real paper. See CLAUDE.md.
+% different real paper. See the `references` skill.
 %
 % The placeholder below deliberately carries no DOI. Delete it once you have a
 % real citation (it is cited from main.tex, so remove that \cite too).

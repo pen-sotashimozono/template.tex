@@ -53,9 +53,9 @@ CLAUDE.md  LICENSE          # root-only, see below
 
 .github/docs.toml           # root documents and versions — the version authority
 .github/CHANGELOG.md        # one entry per version
-.github/scripts/            # bump.sh, docs.py, closure.py, diff.sh, arxiv_bundle.sh, fetch_sources.sh
+.github/scripts/            # bump.sh, docs.py, closure.py, diff.sh, arxiv_bundle.sh, refs_sync.sh, fetch_sources.sh
 .github/workflows/          # build, version checks, release, reference verification
-.claude/skills/changelog/   # how to record a change and bump
+.claude/skills/             # changelog (record a change), references (doiget)
 
 out/                        # build output (gitignored)
 ```
