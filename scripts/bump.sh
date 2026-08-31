@@ -5,9 +5,10 @@
 #   ./scripts/bump.sh main patch "One line on what changed and why."
 #   ./scripts/bump.sh --affected patch "..."   # every document this branch touched
 #
-# Every PR to main must carry exactly one such bump per document it changes
-# (VersionCheck.yml), single-step from the CURRENT tip of main. If main moved
-# while your branch was open, merge it in and re-run this script.
+# Every PR to main must carry exactly one such bump per document it changes and
+# none for the documents it does not (the version-check job in latex-ci.yml),
+# single-step from the CURRENT tip of main. If main moved while your branch was
+# open, merge it in and re-run this script.
 #
 # --affected asks scripts/closure.py which documents this branch actually
 # touched and bumps exactly those -- the same set CI will demand. It reads the

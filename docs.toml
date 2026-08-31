@@ -11,8 +11,13 @@
 # repository configuration.
 #
 # `version` is the only version authority in this repository -- there is no
-# VERSION file. VersionCheck.yml requires a one-step semver bump on every PR,
-# and Release.yml tags <id>-v<version>. Bump with `./scripts/bump.sh <id>`.
+# VERSION file. The version-check job in latex-ci.yml requires a one-step semver
+# bump for every document a PR touches, and forbids one for the documents it
+# does not; Release.yml tags <id>-v<version>. Bump with
+# `./scripts/bump.sh --affected`.
+#
+# In a repository generated from this template, Initialize.yml resets every
+# version here to 0.1.0 on the first push.
 #
 # The dependency closure of a document is NOT listed here. It is derived from
 # the document's own build record -- see scripts/closure.py. A hand-maintained
@@ -28,4 +33,4 @@ arxiv   = true
 version = "0.0.11"
 
 [notes]
-version = "0.1.0"
+version = "0.0.11"

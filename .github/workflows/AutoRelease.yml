@@ -2,8 +2,8 @@ name: Auto Release
 
 # After a PR merges to main, release every document in docs.toml whose current
 # version has no matching tag yet. Versions are bumped by hand in the PR and
-# gated by VersionCheck.yml, so a missing tag means the merged PR raised that
-# document's version.
+# gated by the version-check job in latex-ci.yml, so a missing tag means the
+# merged PR raised that document's version.
 #
 # The document list is never written here: it is read from docs.toml, so adding
 # a root document to the manifest is all it takes to get it released.

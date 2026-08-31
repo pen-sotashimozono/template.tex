@@ -18,7 +18,7 @@ version; they belong to `main`.
 
 <!-- new entries go directly below this line -->
 
-## notes-v0.1.0 — 2026-08-31
+## notes-v0.0.11 — 2026-08-31
 
 First release of the working notebook: article class, one column, self-contained
 preamble, sharing only `references.bib` with the paper.
