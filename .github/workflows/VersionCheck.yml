@@ -1,14 +1,20 @@
 name: Version Check
 
-# Every PR to main MUST bump VERSION by exactly one semver step
-# (patch, minor, or major). An unchanged VERSION fails: each merged PR is a
-# release, so the version never silently stands still and every merge leaves a
-# comparable snapshot (paper PDF + latexdiff against the previous tag).
+# Every PR to main MUST bump the version of every document in docs.toml by
+# exactly one semver step (patch, minor, or major). An unchanged version fails:
+# each merged PR is a release, so the version never silently stands still and
+# every merge leaves a comparable snapshot (document PDF + latexdiff against
+# the previous tag).
 #
 # The comparison is against the CURRENT tip of the base branch, not the state
 # at PR creation. If another PR merges first, this check goes red until the
-# branch is rebased and re-bumped — that is intended: the ladder must stay
-# single-step. Use `scripts/bump.sh patch` to bump.
+# branch takes main in and re-bumps — that is intended: the ladder must stay
+# single-step. Use `scripts/bump.sh <document> patch` to bump.
+#
+# The rule is "every document" only because there is one. Once the second root
+# document lands (#17) this passes `--only` from `closure.py affected`, so a PR
+# bumps exactly the documents whose dependency closure it touched — and a PR
+# that touches none of them, like a CI or README change, needs no bump at all.
 
 on:
   pull_request:
@@ -26,55 +32,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Compare VERSION against base branch
+      - name: Compare docs.toml against base branch
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          SEMVER='^[0-9]+\.[0-9]+\.[0-9]+$'
-
-          HEAD_VER="$(cat VERSION)"
-          if ! echo "$HEAD_VER" | grep -qE "$SEMVER"; then
-            echo "::error::VERSION '$HEAD_VER' is not in X.Y.Z form"
-            exit 1
-          fi
-
+          set -euo pipefail
           git fetch origin "$BASE_REF" --depth=1
-          BASE_VER="$(git show "FETCH_HEAD:VERSION" 2>/dev/null || echo "")"
-
-          if [ -z "$BASE_VER" ]; then
-            echo "No VERSION on base branch — treating '$HEAD_VER' as initial. OK."
-            exit 0
-          fi
-          if ! echo "$BASE_VER" | grep -qE "$SEMVER"; then
-            echo "::error::base VERSION '$BASE_VER' is not in X.Y.Z form"
-            exit 1
-          fi
-
-          IFS=. read -r bM bm bp <<< "$BASE_VER"
-          NEXT_PATCH="${bM}.${bm}.$((bp + 1))"
-          NEXT_MINOR="${bM}.$((bm + 1)).0"
-          NEXT_MAJOR="$((bM + 1)).0.0"
-
-          if [ "$HEAD_VER" = "$BASE_VER" ]; then
-            echo "::error::VERSION is unchanged at ${BASE_VER}. Every PR must bump it by one step."
-            echo "::error::Run './scripts/bump.sh patch' (or minor/major) and commit, then push."
-            echo "::error::Allowed next values: ${NEXT_PATCH} (patch), ${NEXT_MINOR} (minor), ${NEXT_MAJOR} (major)."
-            exit 1
-          fi
-
-          IFS=. read -r hM hm hp <<< "$HEAD_VER"
-
-          if   [ "$hM" -eq "$((bM + 1))" ] && [ "$hm" -eq 0 ]            && [ "$hp" -eq 0 ]; then
-            KIND=major
-          elif [ "$hM" -eq "$bM" ]         && [ "$hm" -eq "$((bm + 1))" ] && [ "$hp" -eq 0 ]; then
-            KIND=minor
-          elif [ "$hM" -eq "$bM" ]         && [ "$hm" -eq "$bm" ]         && [ "$hp" -eq "$((bp + 1))" ]; then
-            KIND=patch
-          else
-            echo "::error::VERSION must be a single-step semver bump from ${BASE_VER} (the current tip of ${BASE_REF})."
-            echo "::error::Allowed next values: ${NEXT_MAJOR} (major), ${NEXT_MINOR} (minor), ${NEXT_PATCH} (patch). Got '${HEAD_VER}'."
-            echo "::error::If another PR merged first, rebase onto ${BASE_REF} and re-run './scripts/bump.sh patch'."
-            exit 1
-          fi
-
-          echo "Valid ${KIND} bump: ${BASE_VER} -> ${HEAD_VER}. Release v${HEAD_VER} will fire on merge."
+          # An absent docs.toml on the base leaves an empty manifest, which
+          # reads every document as new — check-bump accepts that as initial.
+          git show "FETCH_HEAD:docs.toml" > base-docs.toml 2>/dev/null || : > base-docs.toml
+          python3 scripts/docs.py check-bump --base base-docs.toml

@@ -36,10 +36,8 @@ import os
 import pathlib
 import subprocess
 import sys
-import tomllib
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
-MANIFEST = ROOT / "docs.toml"
+from docs import ROOT, load, root_of
 
 
 def git(*args: str) -> str:
@@ -47,11 +45,6 @@ def git(*args: str) -> str:
         ["git", "-C", str(ROOT), *args],
         capture_output=True, text=True, check=True,
     ).stdout
-
-
-def load_docs() -> dict[str, dict]:
-    with MANIFEST.open("rb") as fh:
-        return tomllib.load(fh)
 
 
 def tracked_files() -> set[str]:
@@ -101,11 +94,12 @@ def to_repo_path(base: pathlib.Path, raw: str) -> str | None:
     """Repo-relative POSIX path, or None if the file lives outside the repo.
 
     Normalised lexically, never through the filesystem: Path.resolve() rewrites
-    a name to its on-disk spelling, so on Windows the bare "version" entry that
-    latexmk records under the lualatex rule comes back as the repo's VERSION
-    (different file -- the md5 does not match) and lands in the closure. git is
-    case-sensitive and CI is Linux, so matching must be too, or the closure
-    depends on who ran the build.
+    a name to its on-disk spelling, so a recorded name that differs from a
+    tracked one only in case comes back as the tracked file and lands in the
+    closure. That is how the bare "version" entry latexmk records under the
+    lualatex rule used to pull in the repo's old VERSION file on Windows -- a
+    different file, whose md5 did not even match. git is case-sensitive and CI
+    is Linux, so matching must be too, or the closure depends on who built.
     """
     path = raw if os.path.isabs(raw) else os.path.join(str(base), raw)
     path = os.path.normpath(path)
@@ -118,13 +112,14 @@ def to_repo_path(base: pathlib.Path, raw: str) -> str | None:
 
 
 def closure(doc_id: str, doc: dict, tracked: set[str]) -> set[str]:
-    stem = pathlib.Path(doc["root"]).stem
+    root = root_of(doc_id, {doc_id: doc})
+    stem = pathlib.Path(root).stem
     fls = ROOT / "out" / f"{stem}.fls"
     fdb = ROOT / "out" / f"{stem}.fdb_latexmk"
     if not fls.exists() and not fdb.exists():
         sys.exit(
             f"{doc_id}: no build record under out/ (looked for {fls.name} and "
-            f"{fdb.name}). Run `latexmk {doc['root']}` first."
+            f"{fdb.name}). Run `latexmk {root}` first."
         )
 
     raw: list[tuple[pathlib.Path, str]] = []
@@ -134,8 +129,8 @@ def closure(doc_id: str, doc: dict, tracked: set[str]) -> set[str]:
         raw += fdb_sources(fdb)
 
     found = {p for p in (to_repo_path(b, r) for b, r in raw) if p and p in tracked}
-    if doc["root"] in tracked:
-        found.add(doc["root"])
+    if root in tracked:
+        found.add(root)
     return found
 
 
@@ -155,7 +150,7 @@ def main() -> int:
     p_affected.add_argument("--base", required=True, help="base ref to compare against")
     args = parser.parse_args()
 
-    docs = load_docs()
+    docs = load()
 
     if args.command == "docs":
         for doc_id in docs:

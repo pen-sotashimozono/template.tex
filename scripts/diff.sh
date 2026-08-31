@@ -1,26 +1,61 @@
 #!/bin/sh
-# Render a latexdiff between two revisions, locally, with \input children
-# flattened. Usage:
+# Render a latexdiff between two revisions of one document, locally, with
+# \input children flattened. Usage:
 #
-#   ./scripts/diff.sh v0.1.2 v0.1.3   # between two tags/commits
-#   ./scripts/diff.sh v0.1.2          # tag -> working tree
+#   ./scripts/diff.sh main-v0.1.2 main-v0.1.3   # between two tags/commits
+#   ./scripts/diff.sh main-v0.1.2               # tag -> working tree
+#   ./scripts/diff.sh -d notes HEAD~5           # pick the document explicitly
 #
 # Output: out/diff-<from>..<to>.pdf
 #
-# Flattening matters: this document can keep its content in child .tex files, so
-# a latexdiff of main.tex alone shows nothing when only a child changed. Each
+# The document is taken from the from-revision when it is a <id>-v<version>
+# tag, since that is the usual way in; otherwise -d, or the single document in
+# docs.toml when there is only one.
+#
+# Flattening matters: a document can keep its content in child .tex files, so
+# a latexdiff of the root alone shows nothing when only a child changed. Each
 # revision is checked out into its own worktree and flattened with latexpand
 # first.
 #
 # To read changes as an agent, prefer plain text:
-#   git diff v0.1.2 v0.1.3 -- '*.tex'
+#   git diff main-v0.1.2 main-v0.1.3 -- '*.tex'
 # This script is for a rendered, human-readable diff.
 set -eu
 
-FROM="${1:?usage: $0 <from-rev> [to-rev]}"
-TO="${2:-}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+PY="${PYTHON:-python3}"
+command -v "$PY" >/dev/null 2>&1 || PY=python
+
+DOC=''
+if [ "${1:-}" = "-d" ]; then
+  DOC="${2:?usage: $0 [-d DOCUMENT] <from-rev> [to-rev]}"
+  shift 2
+fi
+
+FROM="${1:?usage: $0 [-d DOCUMENT] <from-rev> [to-rev]}"
+TO="${2:-}"
+
+IDS="$("$PY" scripts/docs.py ids)"
+if [ -z "$DOC" ]; then
+  # main-v0.1.2 -> main, but only if that is really a document
+  CANDIDATE="${FROM%-v*}"
+  for ID in $IDS; do
+    if [ "$ID" = "$CANDIDATE" ]; then
+      DOC="$ID"
+    fi
+  done
+fi
+if [ -z "$DOC" ]; then
+  if [ "$(echo "$IDS" | wc -l)" -eq 1 ]; then
+    DOC="$IDS"
+  else
+    echo "cannot tell which document '$FROM' refers to; pass -d <id>" >&2
+    echo "documents in docs.toml: $(echo "$IDS" | tr '\n' ' ')" >&2
+    exit 1
+  fi
+fi
+ROOT_TEX="$("$PY" scripts/docs.py root "$DOC")"
 
 command -v latexpand >/dev/null || { echo "latexpand not found (TeX Live)" >&2; exit 1; }
 command -v latexdiff >/dev/null || { echo "latexdiff not found (TeX Live)" >&2; exit 1; }
@@ -34,14 +69,14 @@ cleanup() {
 trap cleanup EXIT
 
 git worktree add -q --detach "$WORK/from" "$FROM"
-(cd "$WORK/from" && latexpand main.tex > "$WORK/from.tex" 2>/dev/null)
+(cd "$WORK/from" && latexpand "$ROOT_TEX" > "$WORK/from.tex" 2>/dev/null)
 
 if [ -n "$TO" ]; then
   git worktree add -q --detach "$WORK/to" "$TO"
-  (cd "$WORK/to" && latexpand main.tex > "$WORK/to.tex" 2>/dev/null)
+  (cd "$WORK/to" && latexpand "$ROOT_TEX" > "$WORK/to.tex" 2>/dev/null)
   LABEL="$TO"
 else
-  latexpand main.tex > "$WORK/to.tex" 2>/dev/null
+  latexpand "$ROOT_TEX" > "$WORK/to.tex" 2>/dev/null
   LABEL="working"
 fi
 

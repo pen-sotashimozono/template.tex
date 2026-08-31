@@ -1,11 +1,18 @@
-# Root documents. One entry per compiled PDF.
+# Root documents. One table per compiled PDF.
 #
-# The section name is the tag prefix: [paper] releases as paper-v0.0.10.
-# Adding a document means adding `root` and an initial `version` -- nothing
-# else here is maintained by hand.
+# The table name is the document id, and everything mechanical follows from it:
 #
-# `version` is rewritten by CI, not by hand. Until VersionCheck.yml is switched
-# over, the root VERSION file is still the authority and these two must agree.
+#     [main]  ->  root main.tex, build out/main.pdf, release tag main-v0.1.0
+#
+# so a document is added by adding a table, and nothing else has to be told
+# about it. Set `root` only when the file is not <id>.tex.
+#
+# A table is a document iff it carries `version`; anything else here is
+# repository configuration.
+#
+# `version` is the only version authority in this repository -- there is no
+# VERSION file. VersionCheck.yml requires a one-step semver bump on every PR,
+# and Release.yml tags <id>-v<version>. Bump with `./scripts/bump.sh <id>`.
 #
 # The dependency closure of a document is NOT listed here. It is derived from
 # the document's own build record -- see scripts/closure.py. A hand-maintained
@@ -14,6 +21,5 @@
 # The second document -- a working notebook in article rather than revtex --
 # arrives with the two-document port (#17).
 
-[paper]
-root    = "main.tex"
-version = "0.0.10"
+[main]
+version = "0.0.11"

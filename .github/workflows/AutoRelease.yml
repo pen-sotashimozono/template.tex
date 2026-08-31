@@ -1,8 +1,12 @@
 name: Auto Release
 
-# After a PR merges to main, if the current VERSION has no matching tag yet,
-# dispatch Release.yml for it. VERSION is bumped by hand in the PR and gated
-# by VersionCheck.yml, so a new tag here means the merged PR raised the version.
+# After a PR merges to main, release every document in docs.toml whose current
+# version has no matching tag yet. Versions are bumped by hand in the PR and
+# gated by VersionCheck.yml, so a missing tag means the merged PR raised that
+# document's version.
+#
+# The document list is never written here: it is read from docs.toml, so adding
+# a root document to the manifest is all it takes to get it released.
 #
 # No PAT required: Release.yml is triggered via workflow_dispatch, the one
 # event GITHUB_TOKEN can fire cross-workflow. Release.yml creates/pushes the tag.
@@ -19,26 +23,27 @@ permissions:
 jobs:
   release:
     if: github.event.pull_request.merged == true
-    name: Tag and release if VERSION is new
+    name: Tag and release each document with a new version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - name: Dispatch release for new VERSION
+      - name: Dispatch a release per newly bumped document
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          V="$(cat VERSION)"
-          if ! echo "$V" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "VERSION '$V' is not in X.Y.Z form; skipping."
-            exit 0
-          fi
+          set -euo pipefail
+          for DOC in $(python3 scripts/docs.py ids); do
+            V="$(python3 scripts/docs.py version "$DOC")"
+            TAG="$(python3 scripts/docs.py tag "$DOC")"
 
-          TAG="v${V}"
-          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
-            echo "Tag ${TAG} already exists — VERSION was not bumped. No release."
-            exit 0
-          fi
+            if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
+              echo "${DOC}: ${TAG} already exists — version was not bumped. No release."
+              continue
+            fi
 
-          echo "New version ${V} detected — dispatching Release.yml."
-          gh workflow run Release.yml --ref main --field version="${V}"
+            echo "${DOC}: new version ${V} — dispatching Release.yml for ${TAG}."
+            gh workflow run Release.yml --ref main \
+              --field document="${DOC}" \
+              --field version="${V}"
+          done
