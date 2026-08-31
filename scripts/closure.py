@@ -141,6 +141,11 @@ def changed_files(base: str) -> set[str]:
 
 
 def main() -> int:
+    # newline="" means no translation on write, so lines end LF even on
+    # Windows. print() would otherwise emit CRLF, and shell callers that
+    # word-split this output would carry the carriage return into an
+    # argument -- a document id then matches nothing in the manifest.
+    sys.stdout.reconfigure(newline="")
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("docs", help="print document ids")

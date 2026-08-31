@@ -35,12 +35,31 @@ case "$KIND" in patch|minor|major) ;; *) usage ;; esac
 if [ "$TARGET" = "--affected" ]; then
   BASE=main
   git -C "$ROOT" rev-parse --verify --quiet "$BASE" >/dev/null || BASE=origin/main
-  DOC_LIST="$("$PY" "$CLOSURE" affected --base "$BASE" 2>/dev/null || true)"
+  AFFECTED="$("$PY" "$CLOSURE" affected --base "$BASE" 2>/dev/null || true)"
+
+  # A document absent from the base branch is new, and the version check
+  # accepts whatever version it arrives with -- there is nothing to step from.
+  # Bumping it here would push it off its intended initial version.
+  BASE_DOCS="$(git -C "$ROOT" show "$BASE:docs.toml" 2>/dev/null > "$ROOT/.base-docs.tmp"     && "$PY" "$DOCS" ids --file "$ROOT/.base-docs.tmp" 2>/dev/null || true)"
+  rm -f "$ROOT/.base-docs.tmp"
+
+  DOC_LIST=''
+  for DOC in $AFFECTED; do
+    for KNOWN in $BASE_DOCS; do
+      if [ "$DOC" = "$KNOWN" ]; then
+        DOC_LIST="${DOC_LIST} ${DOC}"
+      fi
+    done
+  done
+
   if [ -z "$DOC_LIST" ]; then
-    echo "No document's dependency closure changed since $BASE — no bump needed."
+    echo "No existing document's dependency closure changed since $BASE — no bump needed."
+    for DOC in $AFFECTED; do
+      echo "  ($DOC is new; it keeps the version it was added with)"
+    done
     exit 0
   fi
-  echo "Affected since $BASE: $(echo "$DOC_LIST" | tr '\n' ' ')"
+  echo "Affected since $BASE:${DOC_LIST}"
 else
   DOC_LIST="$TARGET"
 fi

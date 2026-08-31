@@ -18,7 +18,7 @@ through a TOML dumper. A dumper reformats the whole file and drops every
 comment, and docs.toml is meant to stay readable by hand.
 
 Usage:
-    python scripts/docs.py ids [--json]                 # document ids
+    python scripts/docs.py ids [--json] [--file F]      # document ids
     python scripts/docs.py root <id>                    # root .tex path
     python scripts/docs.py version <id>                 # current version
     python scripts/docs.py tag <id>                     # <id>-v<version>
@@ -167,10 +167,16 @@ def check_bump(base_path: pathlib.Path, only: list[str] | None) -> int:
 
 
 def main() -> int:
+    # newline="" means no translation on write, so lines end LF even on
+    # Windows. print() would otherwise emit CRLF, and shell callers that
+    # word-split this output would carry the carriage return into an
+    # argument -- a document id then matches nothing in the manifest.
+    sys.stdout.reconfigure(newline="")
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = parser.add_subparsers(dest="command", required=True)
     p_ids = sub.add_parser("ids", help="print document ids")
     p_ids.add_argument("--json", action="store_true", help="as a JSON array, for an Actions matrix")
+    p_ids.add_argument("--file", type=pathlib.Path, default=MANIFEST, help="read another manifest")
     for name, help_text in (
         ("root", "print a document's root .tex"),
         ("version", "print a document's version"),
@@ -196,7 +202,7 @@ def main() -> int:
     if args.command == "check-bump":
         return check_bump(args.base, args.only)
 
-    docs = load()
+    docs = load(args.file) if args.command == "ids" else load()
     if args.command == "ids":
         print(json.dumps(list(docs)) if args.json else "\n".join(docs))
         return 0

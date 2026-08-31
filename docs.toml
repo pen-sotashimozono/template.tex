@@ -26,7 +26,7 @@
 [main]
 style   = "revtex"
 arxiv   = true
-version = "0.0.11"
+version = "0.0.12"
 
 [notes]
 style   = "article"
