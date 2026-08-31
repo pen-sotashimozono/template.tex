@@ -4,6 +4,10 @@
 # Python bytecode from scripts/
 __pycache__/
 
+# arXiv submission bundles, produced by scripts/arxiv_bundle.sh
+/arxiv-src/
+/arxiv-check/
+
 # LaTeX auxiliaries
 *.aux
 *.bbl

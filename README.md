@@ -154,7 +154,13 @@ The pipeline builds in parallel and attaches to the GitHub Release:
 | `main-v1.0.0.pdf` | compiled document |
 | `diff-main-v1.0.0.pdf` | latexdiff against this document's previous tag (skipped on its first tag) |
 | `supplemental-main-v1.0.0.pdf` | supplementary (only if `supplemental.tex` exists) |
-| `arxiv-bundle-main-v1.0.0.zip` | `main.tex` + `main.bbl` + `figures/*.pdf` for arXiv submission |
+| `arxiv-bundle-main-v1.0.0.zip` | flattened `main.tex` + `main.bbl` + `figures/*.pdf` for arXiv submission |
+
+The bundle is **flattened**, not copied: a root that pulls content in through
+`\input` is not self-contained, and arXiv sees only what is inside the tarball.
+`scripts/arxiv_bundle.sh` builds it and then compiles it in isolation, and CI
+runs that on every PR — an unflattened bundle fails on arXiv while every build
+here stays green, so nothing else would notice it break.
 
 ## Supplementary material
 

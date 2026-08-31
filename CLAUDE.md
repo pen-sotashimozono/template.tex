@@ -33,6 +33,7 @@ made twice, and nothing catches a missed one.
 | `figures/` | figures, PDF only |
 | `notes/` | child `.tex` files of `notes.tex` |
 | `scripts/bump.sh` | version bump helper |
+| `scripts/arxiv_bundle.sh` | builds the submission bundle and proves it compiles alone |
 | `scripts/docs.py` | reads and writes `docs.toml` -- ids, roots, tags, versions |
 | `scripts/closure.py` | a document's dependency closure, read off its build record |
 | `out/` | build output (gitignored) |

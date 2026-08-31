@@ -98,21 +98,18 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # The bundle is flattened, not copied. A root that pulls in notes/
-      # children is not self-contained, and arXiv gets only what is in the
-      # tarball -- an unflattened copy fails there with "File not found" after
-      # the build looked perfectly healthy here.
       - uses: xu-cheng/latex-action@v4
         with:
           root_file: ${{ needs.setup.outputs.root }}
           latexmk_use_lualatex: true
           pre_compile: mkdir -p out
+          # Runs inside the container because latexpand and latexmk live there,
+          # not on the runner host. The script compiles the bundle in isolation
+          # and fails the job if it does not build, so a release cannot ship a
+          # tarball that arXiv will reject.
           post_compile: |
             if [ "${{ needs.setup.outputs.arxiv }}" = "true" ]; then
-              mkdir -p arxiv-src
-              latexpand "${{ needs.setup.outputs.root }}" > "arxiv-src/${{ needs.setup.outputs.stem }}.tex"
-              cp "out/${{ needs.setup.outputs.stem }}.bbl" arxiv-src/ 2>/dev/null || true
-              find figures -name "*.pdf" -exec cp {} arxiv-src/ \; 2>/dev/null || true
+              ./scripts/arxiv_bundle.sh "${{ needs.setup.outputs.document }}" arxiv-src
             fi
 
       - uses: actions/upload-artifact@v7
