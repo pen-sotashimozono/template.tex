@@ -98,27 +98,27 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The bundle is flattened, not copied. A root that pulls in styles/ or
+      # notes/ children through \input is not self-contained, and arXiv gets
+      # only what is in the tarball -- an unflattened copy fails there with
+      # "File not found" after the build looked perfectly healthy here.
       - uses: xu-cheng/latex-action@v4
         with:
           root_file: ${{ needs.setup.outputs.root }}
           latexmk_use_lualatex: true
           pre_compile: mkdir -p out
+          post_compile: |
+            if [ "${{ needs.setup.outputs.arxiv }}" = "true" ]; then
+              mkdir -p arxiv-src
+              latexpand "${{ needs.setup.outputs.root }}" > "arxiv-src/${{ needs.setup.outputs.stem }}.tex"
+              cp "out/${{ needs.setup.outputs.stem }}.bbl" arxiv-src/ 2>/dev/null || true
+              find figures -name "*.pdf" -exec cp {} arxiv-src/ \; 2>/dev/null || true
+            fi
 
       - uses: actions/upload-artifact@v7
         with:
           name: document
           path: out/${{ needs.setup.outputs.stem }}.pdf
-
-      - name: Package arXiv bundle
-        if: needs.setup.outputs.arxiv == 'true'
-        env:
-          STEM: ${{ needs.setup.outputs.stem }}
-          ROOT: ${{ needs.setup.outputs.root }}
-        run: |
-          mkdir arxiv-src
-          cp "$ROOT" arxiv-src/
-          cp "out/${STEM}.bbl" arxiv-src/ 2>/dev/null || true
-          find figures -name "*.pdf" -exec cp {} arxiv-src/ \; 2>/dev/null || true
 
       - uses: actions/upload-artifact@v7
         if: needs.setup.outputs.arxiv == 'true'
