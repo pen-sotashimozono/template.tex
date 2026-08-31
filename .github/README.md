@@ -12,7 +12,7 @@ carries its own preamble, so either can be read and shipped on its own.
 - **revtex4-2** with PRB two-column layout, plus a self-contained **article** notebook
 - **LuaLaTeX** engine via latexmk, one `.latexmkrc` for every document
 - **Multiple root documents**: `.github/docs.toml` lists them; the CI build matrix, the tags and the releases are all generated from it
-- **Closure-driven version checks**: a PR bumps exactly the documents whose `\input` children or bibliography it touched, and is rejected for bumping any it did not
+- **Two version checks**: a fast one that allows only a single semver step, and a closure-driven one that requires a bump for exactly the documents whose `\input` children or bibliography the PR touched
 - **Per-document releases**: `main-v1.2.3`, `notes-v0.4.0`, each with its own PDF and its own latexdiff against its own previous tag
 - **arXiv bundle**: flattened `.tex` + `.bbl` + figures, and CI compiles it in isolation on every PR to prove it still builds
 - **DOI verification**: every reference in `references.bib` is validated against Crossref/arXiv via [doiget](https://github.com/sotashimozono/doiget)
@@ -165,9 +165,20 @@ goes red until you merge `main` into your branch and re-bump — expect a confli
 on `.github/docs.toml`, and keep your branch's higher value. PRs touching
 different documents do not collide.
 
+Two checks enforce this, split on purpose:
+
+| Check | Rule | Needs a build |
+|---|---|---|
+| **Validate semver step** (`VersionCheck.yml`) | every version is unchanged or exactly one semver step from `main` — no two-step jumps, no going backwards, no `X.Y` | no |
+| **Validate semver bump** (`latex-ci.yml`) | the documents the PR touched moved, and the ones it did not touch did not | yes, it reads each document's closure from the build records |
+
+The first is a strict subset of the second. It is worth its own workflow because
+it answers in seconds rather than after a LaTeX build, and because it still runs
+when a build fails — which is precisely when the closure-driven check cannot run
+at all.
+
 No branch protection is configured on this repository, so the merge button is
-the gate. Add **Validate semver bump** as a required status check to make it
-blocking.
+the gate. Require both to make it blocking.
 
 ### Manual release
 

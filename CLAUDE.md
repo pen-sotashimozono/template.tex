@@ -107,8 +107,19 @@ creation.** When several PRs touch the *same* document at once:
 - That merge conflicts on `.github/docs.toml`. Resolve by keeping **your
   branch's higher value**, not `main`'s.
 
-No branch protection is configured, so the merge button is the gate. Add
-**Validate semver bump** as a required status check to make it blocking.
+Two checks guard this, and the split is deliberate:
+
+| Check | Rule | Needs a build |
+|---|---|---|
+| **Validate semver step** (`VersionCheck.yml`) | every version is unchanged or exactly one step | no |
+| **Validate semver bump** (`latex-ci.yml`) | the *right* documents moved, and only those | yes |
+
+The first is a strict subset of the second, kept separate because it answers in
+seconds and because it still runs when a build fails -- which is exactly when
+the closure-driven one cannot run at all.
+
+No branch protection is configured, so the merge button is the gate. Require
+both to make it blocking.
 
 ## The submission bundle must compile on its own
 

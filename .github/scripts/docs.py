@@ -26,6 +26,7 @@ Usage:
     python scripts/docs.py bump <id> <patch|minor|major>
     python scripts/docs.py init <version>               # every version -> X
     python scripts/docs.py check-bump --base <file> [--only ID ...]
+    python scripts/docs.py check-step --base <file>
 
 Run from anywhere; paths resolve against the repository root.
 """
@@ -169,6 +170,54 @@ def check_bump(base_path: pathlib.Path, only: list[str] | None) -> int:
     return 1 if errors else 0
 
 
+def check_step(base_path: pathlib.Path) -> int:
+    """Every document is unchanged, or exactly one semver step from the base.
+
+    Deliberately weaker than check_bump, which also decides *which* documents
+    ought to have moved and therefore needs each document's dependency closure,
+    and therefore needs a build. This asks only whether the versions that did
+    move moved legally, so it needs nothing but the two manifests -- it runs in
+    seconds, and it still runs when a build fails, which is exactly when the
+    closure-driven check cannot run at all.
+    """
+    head = load()
+    base = load(base_path)
+
+    errors: list[str] = []
+    for doc_id, table in head.items():
+        new = table["version"]
+        parse(new, doc_id)
+
+        if doc_id not in base:
+            print(f"{doc_id}: new document at {new}. OK")
+            continue
+
+        old = base[doc_id]["version"]
+        parse(old, f"{doc_id} (base)")
+
+        if new == old:
+            print(f"{doc_id}: unchanged at {old}. OK")
+            continue
+
+        steps = {kind: next_version(old, kind, doc_id) for kind in ("patch", "minor", "major")}
+        if new in steps.values():
+            kind = next(k for k, v in steps.items() if v == new)
+            print(f"{doc_id}: {kind} step {old} -> {new}. OK")
+        else:
+            allowed = ", ".join(f"{v} ({k})" for k, v in steps.items())
+            errors.append(
+                f"{doc_id}: {old} -> {new} is not a single semver step from the "
+                f"current tip of the base branch. Allowed: {old} (unchanged), {allowed}."
+            )
+
+    for gone in sorted(set(base) - set(head)):
+        print(f"{gone}: removed from docs.toml. OK")
+
+    for message in errors:
+        print(f"::error::{message}")
+    return 1 if errors else 0
+
+
 def main() -> int:
     # newline="" means no translation on write, so lines end LF even on
     # Windows. print() would otherwise emit CRLF, and shell callers that
@@ -197,10 +246,14 @@ def main() -> int:
     p_check = sub.add_parser("check-bump", help="validate the ladder against a base manifest")
     p_check.add_argument("--base", required=True, type=pathlib.Path)
     p_check.add_argument("--only", nargs="*", default=None, metavar="ID")
+    p_step = sub.add_parser("check-step", help="every version is unchanged or one step")
+    p_step.add_argument("--base", required=True, type=pathlib.Path)
     args = parser.parse_args()
 
     if args.command == "check-bump":
         return check_bump(args.base, args.only)
+    if args.command == "check-step":
+        return check_step(args.base)
 
     docs = load(args.file) if args.command == "ids" else load()
     if args.command == "ids":
