@@ -4,11 +4,12 @@ LaTeX template for physics papers in APS/PRB style, with a full CI/CD pipeline o
 
 Two root documents out of the box, versioned and released independently: the
 paper in **revtex4-2**, and a working notebook in **article** — one column and a
-wide measure, because long derivations are unreadable in a PRB two-column.
+wide measure, because long derivations are unreadable in a PRB two-column. Each
+carries its own preamble, so either can be read and shipped on its own.
 
 ## Features
 
-- **revtex4-2** with PRB two-column layout, plus an **article** notebook sharing the same preamble
+- **revtex4-2** with PRB two-column layout, plus a self-contained **article** notebook
 - **LuaLaTeX** engine via latexmk
 - **Automated release pipeline**: compile each document, latexdiff against its previous version, and supplementary material on every semver tag
 - **Multiple root documents**: `docs.toml` lists them; the CI matrix, tags and releases are generated from it
@@ -39,9 +40,6 @@ The local build reads `.latexmkrc` and outputs to `out/`.
 docs.toml           # root documents and their versions -- the version authority
 main.tex            # paper, revtex4-2 two-column PRB
 notes.tex           # working notebook, article
-styles/common.tex   # preamble shared by both documents
-styles/revtex.tex   # revtex-only preamble
-styles/article.tex  # article-side equivalents of what revtex provides
 supplemental.tex    # supplementary material (optional, create when needed)
 references.bib      # bibliography (BibTeX; entries from `doiget cite`)
 refs/               # PDF of every cited work, as refs/<bibkey>.pdf
@@ -55,7 +53,7 @@ notes/              # child .tex files of notes.tex
 
 ## Revision markup
 
-Four commands are defined in `styles/common.tex`, so they work in both documents:
+Four commands are defined in each document's preamble:
 
 | Command | Color | Purpose |
 |---|---|---|
@@ -74,18 +72,21 @@ document is one table and nothing else:
 
 ```toml
 [main]              # -> main.tex, out/main.pdf, tag main-v0.1.0
-style   = "revtex"
 arxiv   = true      # also package .tex + .bbl + figures for submission
 version = "0.1.0"
 
 [notes]             # -> notes.tex, out/notes.pdf, tag notes-v0.1.0
-style   = "article"
 version = "0.1.0"
 ```
 
-`style` names the preamble under `styles/` that the root reads; CI checks the
-root really does `\input` it, so the declaration cannot drift. `arxiv` is off by
-default — a submission bundle is meaningless for a working notebook.
+`arxiv` is off by default — a submission bundle is meaningless for a working
+notebook.
+
+Each root carries its own complete preamble rather than reading a shared file,
+so either document can be read and shipped on its own. Two differences are
+worth knowing: **revtex4-2 bundles its own `natbib`**, so only `notes.tex` loads
+it, and `\affiliation` / `\email` / `acknowledgments` are revtex-only, so
+`notes.tex` reimplements them.
 
 Set `root` in a table if the file is not `<id>.tex`. A table is a document iff
 it carries `version`. There is no `VERSION` file: `docs.toml` is the only
@@ -102,9 +103,6 @@ actually changed, through their `\input` children and `references.bib` rather
 than the root file alone, and requires a single semver step for exactly those.
 A document the PR did not touch must stay put. A PR that touches no document at
 all — CI, README, tooling — needs no bump.
-
-Editing `styles/common.tex` bumps both documents, since it is in both closures
-and changes both PDFs.
 
 ```sh
 ./scripts/bump.sh --affected patch "One line on what changed."   # or minor / major

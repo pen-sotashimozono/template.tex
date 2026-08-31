@@ -14,8 +14,10 @@ root file, the build output, the release tag:
 so a third root document would be one table, and the CI matrix, the release and
 the tag all pick it up unchanged.
 
-`style` names the preamble under `styles/` that the root reads. CI checks the
-root really does `\input` it, so the declaration cannot drift.
+Each root carries its own complete preamble. The two documents repeat what
+they share rather than reading a common file, so either can be read and
+shipped on its own -- at the cost that a change to shared markup has to be
+made twice, and nothing catches a missed one.
 
 ## Layout
 
@@ -23,9 +25,6 @@ root really does `\input` it, so the declaration cannot drift.
 |---|---|
 | `main.tex` | paper, revtex4-2 two-column PRB; children pulled in with `\input` |
 | `notes.tex` | working notebook, article; one column, wide measure |
-| `styles/common.tex` | preamble shared by both — maths, hyperref, graphics, revision macros |
-| `styles/revtex.tex` | revtex-only preamble |
-| `styles/article.tex` | article-side equivalents of what revtex provides |
 | `references.bib` | bibliography — entries come from `doiget cite`, never hand-written |
 | `refs/` | one PDF per bibliography key: `refs/<bibkey>.pdf` |
 | `refs/src/` | full text of each reference for grepping — arXiv LaTeX source (`.tex`) where available, PDF extraction (`.txt`) otherwise |
@@ -42,11 +41,12 @@ Build with `latexmk main.tex` → `out/main.pdf`, `latexmk notes.tex` →
 `out/notes.pdf`. One `.latexmkrc` serves both: LuaLaTeX + BibTeX into `out/`,
 and the stems differ so nothing collides.
 
-**Do not load `natbib` from `styles/common.tex`.** revtex4-2 bundles its own and
-they clash; that is why the bibliography setup sits in `styles/article.tex`.
-`\affiliation`, `\email` and the `acknowledgments` environment are revtex-only
-too, and `styles/article.tex` reimplements them so the same body markup
-compiles under either class.
+Two things differ between the classes and are worth knowing before editing
+either preamble. **revtex4-2 bundles its own `natbib`**, so only `notes.tex`
+loads it -- adding `natbib` to `main.tex` clashes with the class. And
+`\affiliation`, `\email` and the `acknowledgments` environment are
+revtex-only, so `notes.tex` reimplements them; that is what lets the same
+title and body markup compile under either class.
 
 ## Version discipline — bump every document the PR touches, and only those
 
@@ -55,9 +55,6 @@ branch actually changed — through their `\input` children and `references.bib`
 not the root file alone — and requires a single semver step for exactly those.
 A document the PR did not touch must stay put; moving it is an error. A PR that
 touches no document at all, such as a CI or README change, needs no bump.
-
-Because `styles/common.tex` is in both closures, editing it bumps both
-documents. That is intended: it changes both PDFs.
 
 Before opening a PR:
 

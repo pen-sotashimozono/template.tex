@@ -18,16 +18,14 @@
 # the document's own build record -- see scripts/closure.py. A hand-maintained
 # list drifts; latexmk's records cannot.
 #
-# `style` names the preamble under styles/ that the root reads, and CI checks
-# the root really does \input it -- a key that can drift silently is worse than
-# no key. `arxiv` adds the .tex + .bbl + figures submission bundle to the
-# release; it is meaningless for a working notebook, so it defaults off.
+# Each root carries its own complete preamble -- the two documents repeat what
+# they share rather than reading a common file, so either one can be read and
+# shipped on its own. `arxiv` adds the .tex + .bbl + figures submission bundle
+# to the release; it is meaningless for a working notebook, so it defaults off.
 
 [main]
-style   = "revtex"
 arxiv   = true
-version = "0.0.12"
+version = "0.0.11"
 
 [notes]
-style   = "article"
 version = "0.1.0"

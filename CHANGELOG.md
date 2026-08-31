@@ -20,12 +20,8 @@ version; they belong to `main`.
 
 ## notes-v0.1.0 — 2026-08-31
 
-First release of the working notebook: article class, one column, sharing
-`references.bib` and `styles/common.tex` with the paper.
-
-## main-v0.0.12 — 2026-08-31
-
-Two root documents: main.tex in revtex4-2 and notes.tex in article, sharing styles/common.tex. Version checks now fire per affected document.
+First release of the working notebook: article class, one column, self-contained
+preamble, sharing only `references.bib` with the paper.
 
 ## main-v0.0.11 — 2026-08-31
 

@@ -6,9 +6,56 @@
 %%%%%%%%%%%%%%% Preamble %%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % One column and a wide measure: long derivations are unreadable in the PRB
-% two-column layout that main.tex uses. Same shared preamble, different class.
-\input{styles/common}
-\input{styles/article}
+% two-column layout main.tex uses. This preamble is deliberately self-contained
+% -- it repeats what main.tex has rather than sharing it, so each document can
+% be read and shipped on its own.
+%
+% ---- Page ---------------------------------------------------------------------
+\usepackage[margin=1in]{geometry}
+%
+% ---- Mathematics -------------------------------------------------------------
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{braket}
+%
+% ---- Bibliography ------------------------------------------------------------
+% apsrev4-2.bst is revtex-only, so this side goes through natbib with a stock
+% style. references.bib is shared with main.tex; only the rendering differs.
+\usepackage[numbers,sort&compress]{natbib}
+\bibliographystyle{unsrtnat}
+%
+% ---- Hyperlinks --------------------------------------------------------------
+\usepackage[colorlinks=true,citecolor=blue,linkcolor=blue,filecolor=blue,urlcolor=blue]{hyperref}
+%
+% ---- Graphics ----------------------------------------------------------------
+\usepackage{graphicx} % figure (luatex driver, auto-detected under LuaLaTeX)
+\graphicspath{{figures/}}
+%
+% ---- Revision markup (comment out before final submission) -------------------
+\usepackage{xcolor}
+\usepackage[normalem]{ulem}
+\newcommand{\sh}[1]{{\color{green}{#1}}}   % author edit
+\newcommand{\ch}[1]{{\color{blue}{#1}}}    % collaborator edit
+\newcommand{\remove}[1]{\sout{#1}}         % deletion
+\newcommand{\rev}[1]{{\color{red}{#1}}}    % response to reviewer
+%
+% ---- revtex-only commands, reimplemented --------------------------------------
+% \affiliation, \email and the acknowledgments environment come from revtex4-2.
+% article has none of them, so the same title markup works in both documents.
+\makeatletter
+\newcommand{\@affiliations}{}
+\newcommand{\affiliation}[1]{\g@addto@macro\@affiliations{\ \small\itshape #1}}
+\newcommand{\email}[1]{\g@addto@macro\@affiliations{\ \small\texttt{#1}}}
+\renewcommand{\@maketitle}{%
+  \begin{center}%
+    {\LARGE\bfseries \@title \par}\vskip 1em%
+    {\large \@author \@affiliations \par}\vskip 1em%
+    {\large \@date \par}%
+  \end{center}\par\vskip 1.5em}
+\makeatother
+\newenvironment{acknowledgments}{\section*{Acknowledgments}}{}
 
 % ==============================================================================
 \begin{document}
@@ -40,9 +87,8 @@ This is a cite example\cite{example2024}: the bibliography is shared with
   \Braket{\psi | \bm{H} | \psi} = \sum_{n} E_n \left| c_n \right|^2 .
 \end{equation}
 
-The revision markup from \texttt{styles/common.tex} works here as well:
-\sh{author edit}, \ch{collaborator edit}, \rev{reviewer response},
-\remove{deletion}.
+The revision markup works here as well: \sh{author edit},
+\ch{collaborator edit}, \rev{reviewer response}, \remove{deletion}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%% Acknowledgments %%%%%%%%%%%%%%

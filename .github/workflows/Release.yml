@@ -98,10 +98,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # The bundle is flattened, not copied. A root that pulls in styles/ or
-      # notes/ children through \input is not self-contained, and arXiv gets
-      # only what is in the tarball -- an unflattened copy fails there with
-      # "File not found" after the build looked perfectly healthy here.
+      # The bundle is flattened, not copied. A root that pulls in notes/
+      # children is not self-contained, and arXiv gets only what is in the
+      # tarball -- an unflattened copy fails there with "File not found" after
+      # the build looked perfectly healthy here.
       - uses: xu-cheng/latex-action@v4
         with:
           root_file: ${{ needs.setup.outputs.root }}

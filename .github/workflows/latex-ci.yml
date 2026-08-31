@@ -56,30 +56,6 @@ jobs:
           echo "root=${ROOT}" >> "$GITHUB_OUTPUT"
           echo "stem=$(basename "$ROOT" .tex)" >> "$GITHUB_OUTPUT"
 
-      # docs.toml declares the style; this is what stops that declaration from
-      # drifting away from what the root actually reads. A key nothing checks
-      # is worse than no key -- it reads as fact and quietly stops being one.
-      - name: Check the root reads the style docs.toml declares
-        env:
-          DOC: ${{ matrix.doc }}
-          ROOT: ${{ steps.doc.outputs.root }}
-        run: |
-          set -euo pipefail
-          STYLE="$(python3 scripts/docs.py get "$DOC" style)"
-          if [ -z "$STYLE" ]; then
-            echo "${DOC}: no style declared, nothing to check."
-            exit 0
-          fi
-          if [ ! -f "styles/${STYLE}.tex" ]; then
-            echo "::error::${DOC}: docs.toml says style=\"${STYLE}\" but styles/${STYLE}.tex does not exist."
-            exit 1
-          fi
-          if ! grep -qF "input{styles/${STYLE}}" "$ROOT"; then
-            echo "::error::${DOC}: docs.toml says style=\"${STYLE}\" but ${ROOT} does not \input{styles/${STYLE}}."
-            exit 1
-          fi
-          echo "${DOC}: ${ROOT} reads styles/${STYLE}.tex, as declared."
-
       # One shared .latexmkrc: every document is LuaLaTeX + BibTeX into out/,
       # and the stems differ, so out/main.* and out/notes.* never collide.
       - name: Compile LaTeX

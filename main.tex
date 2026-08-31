@@ -5,10 +5,28 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%% Preamble %%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Class-specific bits in styles/revtex.tex; everything shared in
-% styles/common.tex, which notes.tex reads too.
-\input{styles/common}
-\input{styles/revtex}
+%
+% ---- Mathematics -------------------------------------------------------------
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{braket}
+%
+% ---- Hyperlinks --------------------------------------------------------------
+\usepackage[colorlinks=true,citecolor=blue,linkcolor=blue,filecolor=blue,urlcolor=blue]{hyperref} % hyperlink with color
+%
+% ---- Graphics ----------------------------------------------------------------
+\usepackage{graphicx} % figure (luatex driver, auto-detected under LuaLaTeX)
+\graphicspath{{figures/}}
+%
+% ---- Revision markup (comment out before final submission) -------------------
+\usepackage{xcolor}
+\usepackage[normalem]{ulem}
+\newcommand{\sh}[1]{{\color{green}{#1}}}   % author edit
+\newcommand{\ch}[1]{{\color{blue}{#1}}}    % collaborator edit
+\newcommand{\remove}[1]{\sout{#1}}         % deletion
+\newcommand{\rev}[1]{{\color{red}{#1}}}    % response to reviewer
 
 % ==============================================================================
 \begin{document}
