@@ -1,8 +1,8 @@
 #!/bin/sh
 # Populate refs/src/ with a greppable full text for every bibliography entry.
 #
-#   ./scripts/fetch_sources.sh          # fill in what is missing
-#   ./scripts/fetch_sources.sh --force  # refetch everything
+#   ./.github/scripts/fetch_sources.sh          # fill in what is missing
+#   ./.github/scripts/fetch_sources.sh --force  # refetch everything
 #
 # Preference order per entry:
 #   1. arXiv LaTeX source  -> refs/src/<bibkey>.tex   (doiget tex-source)

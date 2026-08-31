@@ -2,8 +2,8 @@
 # Raise a document's version in docs.toml by one semver step, and prepend its
 # CHANGELOG stub.
 #
-#   ./scripts/bump.sh main patch "One line on what changed and why."
-#   ./scripts/bump.sh --affected patch "..."   # every document this branch touched
+#   ./.github/scripts/bump.sh main patch "One line on what changed and why."
+#   ./.github/scripts/bump.sh --affected patch "..."   # every document this branch touched
 #
 # One step per document the PR changes, none for the ones it does not, measured
 # from the CURRENT tip of main. If main moved, merge it in and re-run.

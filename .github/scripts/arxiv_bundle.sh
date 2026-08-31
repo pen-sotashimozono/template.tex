@@ -1,7 +1,7 @@
 #!/bin/sh
 # Build a document's arXiv submission bundle, and prove it compiles on its own.
 #
-#   ./scripts/arxiv_bundle.sh <document> [dest-dir]
+#   ./.github/scripts/arxiv_bundle.sh <document> [dest-dir]
 #
 # Flattened, not copied: arXiv sees only what is inside the tarball, so a root
 # that pulls content in through \input is not self-contained. An unflattened

@@ -14,15 +14,15 @@ Writes rewrite the single `version = "..."` line in place. A TOML dumper would
 reformat the file and drop every comment, and docs.toml is read by hand.
 
 Usage:
-    python scripts/docs.py ids [--json] [--file F]      # document ids
-    python scripts/docs.py root <id>                    # root .tex path
-    python scripts/docs.py version <id>                 # current version
-    python scripts/docs.py tag <id>                     # <id>-v<version>
-    python scripts/docs.py next <id> <patch|minor|major>
-    python scripts/docs.py bump <id> <patch|minor|major>
-    python scripts/docs.py init <version>               # every version -> X
-    python scripts/docs.py check-bump --base <file> [--only ID ...]
-    python scripts/docs.py check-step --base <file>
+    python .github/scripts/docs.py ids [--json] [--file F]      # document ids
+    python .github/scripts/docs.py root <id>                    # root .tex path
+    python .github/scripts/docs.py version <id>                 # current version
+    python .github/scripts/docs.py tag <id>                     # <id>-v<version>
+    python .github/scripts/docs.py next <id> <patch|minor|major>
+    python .github/scripts/docs.py bump <id> <patch|minor|major>
+    python .github/scripts/docs.py init <version>               # every version -> X
+    python .github/scripts/docs.py check-bump --base <file> [--only ID ...]
+    python .github/scripts/docs.py check-step --base <file>
 
 Run from anywhere; paths resolve against the repository root.
 """
@@ -146,7 +146,7 @@ def check_bump(base_path: pathlib.Path, only: list[str] | None) -> int:
         if new == old:
             errors.append(
                 f"{doc_id}: version is unchanged at {old}. Run "
-                f"'./scripts/bump.sh {doc_id} patch' and commit. Allowed: {allowed}."
+                f"'./.github/scripts/bump.sh {doc_id} patch' and commit. Allowed: {allowed}."
             )
         elif new not in steps.values():
             errors.append(

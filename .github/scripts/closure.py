@@ -19,9 +19,9 @@ Only files git tracks survive the filter, so TeX Live paths and build products
 under out/ drop out on their own.
 
 Usage:
-    python scripts/closure.py docs                  # document ids
-    python scripts/closure.py list [DOC]            # closure, one path per line
-    python scripts/closure.py affected --base REF   # ids whose closure
+    python .github/scripts/closure.py docs                  # document ids
+    python .github/scripts/closure.py list [DOC]            # closure, one path per line
+    python .github/scripts/closure.py affected --base REF   # ids whose closure
                                                     # intersects REF...HEAD
 
 Requires a build: run `latexmk <root>` first, or the record is missing and the
