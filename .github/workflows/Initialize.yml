@@ -1,8 +1,9 @@
 name: Initialize from template
 
 # Runs once in a repository generated from this template (via "Use this
-# template"). It resets VERSION to the starting 0.1.0 and then deletes itself
-# so it never runs again.
+# template"). It resets every document in docs.toml to the starting 0.1.0,
+# clears the template's own changelog, and then deletes itself so it never
+# runs again.
 #
 # Guard: github.event.repository.is_template is true ONLY in the template repo
 # itself, so this job is skipped there and runs only in generated repos. The
@@ -18,15 +19,15 @@ permissions:
 
 jobs:
   init:
-    name: Reset version to 0.1.0
+    name: Reset versions to 0.1.0
     # Skip in the template repo; run only in repos created from it.
     # Two guards: is_template flag, and an explicit slug exclusion as a backstop.
-    if: ${{ github.event.repository.is_template == false && github.repository != 'sotashimozono/template.tex' }}
+    if: ${{ github.event.repository.is_template == false && github.repository != 'pen-sotashimozono/template.tex' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - name: Initialize VERSION and remove this workflow
+      - name: Initialize versions and remove this workflow
         run: |
           set -euo pipefail
           # Already initialized (workflow somehow ran twice)? Nothing to do.
@@ -35,12 +36,36 @@ jobs:
             exit 0
           fi
 
-          echo "0.1.0" > VERSION
+          # Every document in docs.toml, whatever they are called.
+          python3 scripts/docs.py init 0.1.0
+
+          # The template's own changelog documents the template, not this
+          # project, and would sit above a 0.1.0 that never followed from it.
+          cat > CHANGELOG.md <<'EOF'
+          # Changelog
+
+          One entry per released version, newest first, headed by the tag it ships
+          under. Each document in `docs.toml` has its own ladder, so entries
+          interleave: `main-v0.1.4` may sit above `notes-v0.3.0`. The PR that bumps
+          a version adds its entry here, so the history is readable in-repo without
+          downloading release artifacts. `./scripts/bump.sh <document> <kind>
+          "summary"` prepends the stub.
+
+          To see what actually changed in a document between two of its versions:
+
+          ```sh
+          git diff main-v0.1.0 main-v0.1.1 -- '*.tex'     # text, greppable — prefer this
+          ./scripts/diff.sh main-v0.1.0 main-v0.1.1       # rendered latexdiff PDF, for reading
+          ```
+
+          <!-- new entries go directly below this line -->
+          EOF
+
           rm .github/workflows/Initialize.yml
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add VERSION .github/workflows/Initialize.yml
+          git add docs.toml CHANGELOG.md .github/workflows/Initialize.yml
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0

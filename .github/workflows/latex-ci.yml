@@ -1,5 +1,9 @@
 name: LaTeX CI
 
+# Builds every root document in docs.toml. The matrix is generated from the
+# manifest rather than written here, so adding a document is one table in
+# docs.toml and nothing else.
+
 on:
   push:
     branches: [main]
@@ -10,32 +14,63 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build PDF
+  documents:
+    name: Enumerate documents
     runs-on: ubuntu-latest
+    outputs:
+      ids: ${{ steps.list.outputs.ids }}
     steps:
       - uses: actions/checkout@v7
 
+      - id: list
+        run: |
+          set -euo pipefail
+          IDS="$(python3 scripts/docs.py ids --json)"
+          echo "Documents: ${IDS}"
+          echo "ids=${IDS}" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.doc }}
+    needs: [documents]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        doc: ${{ fromJSON(needs.documents.outputs.ids) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - id: doc
+        env:
+          DOC: ${{ matrix.doc }}
+        run: |
+          set -euo pipefail
+          ROOT="$(python3 scripts/docs.py root "$DOC")"
+          echo "root=${ROOT}" >> "$GITHUB_OUTPUT"
+          echo "stem=$(basename "$ROOT" .tex)" >> "$GITHUB_OUTPUT"
+
+      # One shared .latexmkrc: every document is LuaLaTeX + BibTeX into out/,
+      # and the stems differ, so out/main.* and out/notes.* never collide.
       - name: Compile LaTeX
         uses: xu-cheng/latex-action@v4
         with:
-          root_file: main.tex
+          root_file: ${{ steps.doc.outputs.root }}
           latexmk_use_lualatex: true
           pre_compile: |
             mkdir -p out
             lualatex --version
             bibtex --version
 
-      # Reads the build records latexmk just wrote. Not a gate yet -- it fails
+      # Reads the build record latexmk just wrote. Not a gate yet -- it fails
       # only on a missing record or a malformed docs.toml. It runs here because
       # the closure must not depend on who built: git is case-sensitive and the
       # Windows filesystem is not, so a locally computed closure can differ from
       # this one. Printing it on every PR keeps that visible.
-      - name: Print document closures
-        run: python3 scripts/closure.py list
+      - name: Print document closure
+        run: python3 scripts/closure.py list "${{ matrix.doc }}"
 
       - uses: actions/upload-artifact@v7
         with:
-          name: paper-pdf
-          path: out/main.pdf
+          name: ${{ matrix.doc }}-pdf
+          path: out/${{ steps.doc.outputs.stem }}.pdf
           retention-days: 14

@@ -1,6 +1,9 @@
 # Build output
 /out/
 
+# Python bytecode from scripts/
+__pycache__/
+
 # LaTeX auxiliaries
 *.aux
 *.bbl

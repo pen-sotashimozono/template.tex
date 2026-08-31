@@ -1,10 +1,20 @@
 name: Release
 
+# Releases one document from docs.toml. The tag is <document>-v<version>, so
+# each root document carries its own ladder and its own release history.
+#
+# Everything mechanical is derived from the document id: the root .tex, the
+# build output, the tag, and the asset names. Adding a document to docs.toml is
+# enough — nothing here enumerates them.
+
 on:
   push:
-    tags: ["v[0-9]*.[0-9]*.[0-9]*"]
+    tags: ["*-v[0-9]*.[0-9]*.[0-9]*"]
   workflow_dispatch:
     inputs:
+      document:
+        description: "Document id as it appears in docs.toml (e.g. main)"
+        required: true
       version:
         description: "Version without 'v' prefix (e.g. 1.2.3)"
         required: true
@@ -13,36 +23,49 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
+  group: release-${{ github.event_name == 'workflow_dispatch' && format('{0}-v{1}', inputs.document, inputs.version) || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   setup:
-    name: Resolve version and verify
+    name: Resolve document and verify
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.ver.outputs.tag }}
+      document: ${{ steps.ver.outputs.document }}
+      root: ${{ steps.ver.outputs.root }}
+      stem: ${{ steps.ver.outputs.stem }}
       has-supplemental: ${{ steps.check.outputs.has-supplemental }}
     steps:
       - uses: actions/checkout@v7
 
-      - name: Resolve tag
+      # A pushed tag carries the document in its own name, so both entry points
+      # end up with the same (document, version) pair and one code path below.
+      - name: Resolve document and tag
         id: ver
         run: |
+          set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=v${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+            DOC="${{ inputs.document }}"
+            VER="${{ inputs.version }}"
           else
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            DOC="${GITHUB_REF_NAME%-v*}"
+            VER="${GITHUB_REF_NAME##*-v}"
           fi
 
-      - name: Check tag matches VERSION
-        run: |
-          TAG="${{ steps.ver.outputs.tag }}"
-          EXPECTED="v$(cat VERSION)"
-          if [ "$TAG" != "$EXPECTED" ]; then
-            echo "ERROR: tag '${TAG}' does not match VERSION ('${EXPECTED}')"
+          EXPECTED="$(python3 scripts/docs.py version "$DOC")"
+          if [ "$VER" != "$EXPECTED" ]; then
+            echo "ERROR: ${DOC} is at ${EXPECTED} in docs.toml, but this release is for ${VER}"
             exit 1
           fi
+
+          ROOT="$(python3 scripts/docs.py root "$DOC")"
+          {
+            echo "document=${DOC}"
+            echo "tag=${DOC}-v${VER}"
+            echo "root=${ROOT}"
+            echo "stem=$(basename "${ROOT}" .tex)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create and push tag (workflow_dispatch only)
         if: github.event_name == 'workflow_dispatch'
@@ -66,8 +89,8 @@ jobs:
             echo "has-supplemental=false" >> "$GITHUB_OUTPUT"
           fi
 
-  build-paper:
-    name: Build paper
+  build-document:
+    name: Build document
     needs: [setup]
     runs-on: ubuntu-latest
     steps:
@@ -75,20 +98,23 @@ jobs:
 
       - uses: xu-cheng/latex-action@v4
         with:
-          root_file: main.tex
+          root_file: ${{ needs.setup.outputs.root }}
           latexmk_use_lualatex: true
           pre_compile: mkdir -p out
 
       - uses: actions/upload-artifact@v7
         with:
-          name: paper
-          path: out/main.pdf
+          name: document
+          path: out/${{ needs.setup.outputs.stem }}.pdf
 
       - name: Package arXiv bundle
+        env:
+          STEM: ${{ needs.setup.outputs.stem }}
+          ROOT: ${{ needs.setup.outputs.root }}
         run: |
           mkdir arxiv-src
-          cp main.tex arxiv-src/
-          cp out/main.bbl arxiv-src/ 2>/dev/null || true
+          cp "$ROOT" arxiv-src/
+          cp "out/${STEM}.bbl" arxiv-src/ 2>/dev/null || true
           find figures -name "*.pdf" -exec cp {} arxiv-src/ \; 2>/dev/null || true
 
       - uses: actions/upload-artifact@v7
@@ -106,10 +132,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Find previous tag
+      # Only this document's own tags: a notes release must diff against the
+      # previous notes, not against whatever was tagged most recently.
+      - name: Find previous tag for this document
         id: tags
+        env:
+          DOC: ${{ needs.setup.outputs.document }}
+          TAG: ${{ needs.setup.outputs.tag }}
         run: |
-          PREV=$(git tag --sort=-v:refname | grep -v "^${{ needs.setup.outputs.tag }}$" | head -1)
+          PREV=$(git tag --list "${DOC}-v*" --sort=-v:refname | grep -v "^${TAG}$" | head -1)
           echo "prev=${PREV}" >> "$GITHUB_OUTPUT"
 
       # Materialise the previous revision as a directory tree (git only, no TeX
@@ -122,7 +153,7 @@ jobs:
           mkdir -p prev_rev
           git archive "${{ steps.tags.outputs.prev }}" | tar -x -C prev_rev
 
-      # latexdiff on main.tex alone shows nothing when the change lives in an
+      # latexdiff on the root alone shows nothing when the change lives in an
       # \input child, which is where the content sits once the document is
       # split into notes/*.tex — so flatten both revisions first.
       - name: Compile latexdiff
@@ -133,8 +164,8 @@ jobs:
           latexmk_use_lualatex: true
           pre_compile: |
             mkdir -p out
-            (cd prev_rev && latexpand main.tex > ../prev_flat.tex)
-            latexpand main.tex > new_flat.tex
+            (cd prev_rev && latexpand "${{ needs.setup.outputs.root }}" > ../prev_flat.tex)
+            latexpand "${{ needs.setup.outputs.root }}" > new_flat.tex
             latexdiff prev_flat.tex new_flat.tex > diff.tex
 
       - uses: actions/upload-artifact@v7
@@ -164,9 +195,9 @@ jobs:
 
   release:
     name: GitHub Release
-    needs: [setup, build-paper, build-diff, build-supplementary]
+    needs: [setup, build-document, build-diff, build-supplementary]
     runs-on: ubuntu-latest
-    if: always() && needs.setup.result == 'success' && needs.build-paper.result == 'success' && needs.build-diff.result != 'cancelled' && (needs.build-supplementary.result == 'success' || needs.build-supplementary.result == 'skipped')
+    if: always() && needs.setup.result == 'success' && needs.build-document.result == 'success' && needs.build-diff.result != 'cancelled' && (needs.build-supplementary.result == 'success' || needs.build-supplementary.result == 'skipped')
     steps:
       - uses: actions/checkout@v7
         with:
@@ -176,17 +207,20 @@ jobs:
         with:
           path: dl/
 
-      # Release notes as text: the commit log since the previous tag, plus this
-      # version's CHANGELOG entry if there is one. Without this the release
-      # body is empty and the only way to see what changed is to open a PDF.
+      # Release notes as text: the commit log since this document's previous
+      # tag, plus this version's CHANGELOG entry if there is one. Without this
+      # the release body is empty and the only way to see what changed is to
+      # open a PDF.
       - name: Compose release notes
+        env:
+          DOC: ${{ needs.setup.outputs.document }}
+          TAG: ${{ needs.setup.outputs.tag }}
         run: |
           set -euo pipefail
-          V="${{ needs.setup.outputs.tag }}"
-          PREV=$(git tag --sort=-v:refname | grep -v "^${V}$" | head -1 || true)
+          PREV=$(git tag --list "${DOC}-v*" --sort=-v:refname | grep -v "^${TAG}$" | head -1 || true)
           {
             if [ -f CHANGELOG.md ]; then
-              awk -v v="## ${V#v} " '
+              awk -v v="## ${TAG} " '
                 index($0, v) == 1 { on = 1; next }
                 on && /^## / { exit }
                 on { print }
@@ -196,22 +230,24 @@ jobs:
               echo
               echo "### Commits since ${PREV}"
               echo
-              git log --no-merges --format='- %s' "${PREV}..${V}" 2>/dev/null \
+              git log --no-merges --format='- %s' "${PREV}..${TAG}" 2>/dev/null \
                 || git log --no-merges --format='- %s' "${PREV}..HEAD"
               echo
-              echo "Source diff: \`git diff ${PREV} ${V} -- '*.tex'\` — or \`./scripts/diff.sh ${PREV} ${V}\` for a rendered latexdiff."
+              echo "Source diff: \`git diff ${PREV} ${TAG} -- '*.tex'\` — or \`./scripts/diff.sh ${PREV} ${TAG}\` for a rendered latexdiff."
             fi
           } > release_notes.md
           cat release_notes.md
 
       - name: Prepare release assets
+        env:
+          TAG: ${{ needs.setup.outputs.tag }}
+          STEM: ${{ needs.setup.outputs.stem }}
         run: |
-          V="${{ needs.setup.outputs.tag }}"
           mkdir release
-          [ -f dl/paper/main.pdf ]                 && mv dl/paper/main.pdf                 "release/paper-${V}.pdf"
-          [ -f dl/diff/diff.pdf ]                  && mv dl/diff/diff.pdf                  "release/diff-${V}.pdf"
-          [ -f dl/supplementary/supplemental.pdf ] && mv dl/supplementary/supplemental.pdf "release/supplemental-${V}.pdf"
-          [ -d dl/arxiv-src ]                      && (cd dl/arxiv-src && zip "../../release/arxiv-bundle-${V}.zip" ./*)
+          [ -f "dl/document/${STEM}.pdf" ]          && mv "dl/document/${STEM}.pdf"          "release/${TAG}.pdf"
+          [ -f dl/diff/diff.pdf ]                  && mv dl/diff/diff.pdf                  "release/diff-${TAG}.pdf"
+          [ -f dl/supplementary/supplemental.pdf ] && mv dl/supplementary/supplemental.pdf "release/supplemental-${TAG}.pdf"
+          [ -d dl/arxiv-src ]                      && (cd dl/arxiv-src && zip "../../release/arxiv-bundle-${TAG}.zip" ./*)
 
       - uses: softprops/action-gh-release@v3
         with:
