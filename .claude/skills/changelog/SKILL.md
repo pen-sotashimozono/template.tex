@@ -49,5 +49,5 @@ merge `main` in and re-bump.
 ## A new document
 
 One not yet on `main` is new: any starting version is accepted, and `--affected`
-skips it deliberately. Set its version in `.github/docs.toml` and write its
+skips it deliberately. Set its version in `docs.toml` and write its
 changelog entry by hand, headed by the tag it will release under.

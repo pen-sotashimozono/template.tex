@@ -35,12 +35,12 @@ import re
 import sys
 import tomllib
 
-# .github/scripts/docs.py -> .github/ -> repository root. The manifest sits
-# beside this directory rather than at the top level: the root is kept for the
-# documents themselves, and everything that runs them lives under .github.
+# .github/scripts/docs.py -> .github/ -> repository root. The manifest sits at
+# the root with the documents it describes, not with the machinery that reads
+# it: adding a document is an editing decision, not a CI one.
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
-MANIFEST = HERE.parent / "docs.toml"
+MANIFEST = ROOT / "docs.toml"
 
 SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 TABLE_LINE = re.compile(r"^\s*\[([^\[\]]+)\]")
