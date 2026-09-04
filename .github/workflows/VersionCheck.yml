@@ -1,11 +1,7 @@
 name: Version Check
 
-# Every version in docs.toml is unchanged or exactly one semver step
-# from the base. Which documents *ought* to have moved is the version-check job
-# in latex-ci.yml, which needs each closure and therefore the build.
-#
-# Worth a separate workflow because it answers in seconds rather than after a
-# LaTeX build, and still runs when a build fails -- when the other cannot.
+# Thin caller. Answers in seconds without a LaTeX build, and still runs when a
+# build fails -- when the closure-aware check in latex-ci.yml cannot.
 
 on:
   pull_request:
@@ -16,21 +12,4 @@ permissions:
 
 jobs:
   check:
-    name: Validate semver step
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Compare docs.toml against the base branch
-        env:
-          BASE_REF: ${{ github.base_ref }}
-        run: |
-          set -euo pipefail
-          # A shallow fetch is enough: this reads one blob and never needs a
-          # merge base, unlike the closure diff in latex-ci.yml.
-          git fetch --no-tags --depth=1 origin "$BASE_REF"
-          # An absent manifest on the base leaves an empty one, which reads
-          # every document as new -- accepted, since there is nothing to step
-          # from.
-          git show "FETCH_HEAD:docs.toml" > base-docs.toml 2>/dev/null || : > base-docs.toml
-          python3 .github/scripts/docs.py check-step --base base-docs.toml
+    uses: pen-sotashimozono/.github/.github/workflows/paper-version-check.yml@v1
