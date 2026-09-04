@@ -1,11 +1,8 @@
 name: Auto Release
 
-# After a merge, release every document whose version has no matching tag yet:
-# a missing tag means the merged PR raised that version. The document list is
-# read from docs.toml, never written here.
-#
-# No PAT required: workflow_dispatch is the one event GITHUB_TOKEN can fire
-# cross-workflow. Release.yml creates and pushes the tag.
+# Thin caller. The merged guard is repeated inside the reusable workflow, since
+# a pull_request checkout resolves to the PR's own tree and a closed-unmerged
+# PR would otherwise release the bump it was carrying.
 
 on:
   pull_request:
@@ -19,27 +16,7 @@ permissions:
 jobs:
   release:
     if: github.event.pull_request.merged == true
-    name: Tag and release each document with a new version
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Dispatch a release per newly bumped document
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          for DOC in $(python3 .github/scripts/docs.py ids); do
-            V="$(python3 .github/scripts/docs.py version "$DOC")"
-            TAG="$(python3 .github/scripts/docs.py tag "$DOC")"
-
-            if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
-              echo "${DOC}: ${TAG} already exists — version was not bumped. No release."
-              continue
-            fi
-
-            echo "${DOC}: new version ${V} — dispatching Release.yml for ${TAG}."
-            gh workflow run Release.yml --ref main \
-              --field document="${DOC}" \
-              --field version="${V}"
-          done
+    uses: pen-sotashimozono/.github/.github/workflows/paper-auto-release.yml@v1
+    permissions:
+      contents: write
+      actions: write

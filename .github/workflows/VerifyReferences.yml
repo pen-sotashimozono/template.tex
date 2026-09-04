@@ -1,7 +1,8 @@
 name: Verify references
 
-# Checks that every DOI / arXiv reference in references.bib resolves
-# to real metadata (Crossref / arXiv). Backed by sotashimozono/doiget.
+# Thin caller. contact-email is passed rather than defaulted upstream: Crossref
+# wants a real address for whoever runs the query, and the reusable workflow
+# lives in a public repository.
 
 on:
   pull_request:
@@ -19,19 +20,6 @@ permissions:
 
 jobs:
   verify:
-    name: verify references resolve
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/cache@v6
-        with:
-          path: ~/.cache/doiget
-          key: doiget-resolver-${{ hashFiles('references.bib') }}
-          restore-keys: doiget-resolver-
-
-      - uses: sotashimozono/doiget/.github/actions/verify@next
-        with:
-          path: references.bib
-          strict: "false"
-          contact-email: souta.shimozono@gmail.com
+    uses: pen-sotashimozono/.github/.github/workflows/paper-verify-references.yml@v1
+    with:
+      contact-email: souta.shimozono@gmail.com

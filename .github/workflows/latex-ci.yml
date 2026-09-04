@@ -1,12 +1,10 @@
 name: LaTeX CI
 
-# Builds every root document in docs.toml, and on a PR checks that the versions
-# match what the build says changed. The matrix is generated from the manifest.
-#
-# The version check lives here rather than in its own workflow because it needs
-# the build records latexmk writes (out/<stem>.fls, out/<stem>.fdb_latexmk).
-# Without them it could only compare root files and would miss every \input
-# child. VersionCheck.yml carries the weaker rule that needs no build.
+# Thin caller. The build, the document matrix and the closure-aware bump check
+# live in pen-sotashimozono/.github so every paper repository runs the same
+# pipeline; only the triggers are ours. .github/scripts/ stays here, because
+# bump.sh and diff.sh are run by hand and import docs.py and closure.py from
+# that directory.
 
 on:
   push:
@@ -18,121 +16,5 @@ permissions:
   contents: read
 
 jobs:
-  documents:
-    name: Enumerate documents
-    runs-on: ubuntu-latest
-    outputs:
-      ids: ${{ steps.list.outputs.ids }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - id: list
-        run: |
-          set -euo pipefail
-          IDS="$(python3 .github/scripts/docs.py ids --json)"
-          echo "Documents: ${IDS}"
-          echo "ids=${IDS}" >> "$GITHUB_OUTPUT"
-
   build:
-    name: Build ${{ matrix.doc }}
-    needs: [documents]
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        doc: ${{ fromJSON(needs.documents.outputs.ids) }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - id: doc
-        env:
-          DOC: ${{ matrix.doc }}
-        run: |
-          set -euo pipefail
-          ROOT="$(python3 .github/scripts/docs.py root "$DOC")"
-          echo "root=${ROOT}" >> "$GITHUB_OUTPUT"
-          echo "stem=$(basename "$ROOT" .tex)" >> "$GITHUB_OUTPUT"
-
-      # One shared .latexmkrc: every document is LuaLaTeX + BibTeX into out/,
-      # and the stems differ, so out/main.* and out/notes.* never collide.
-      - name: Compile LaTeX
-        uses: xu-cheng/latex-action@v4
-        with:
-          root_file: ${{ steps.doc.outputs.root }}
-          latexmk_use_lualatex: true
-          pre_compile: |
-            mkdir -p out
-            lualatex --version
-            bibtex --version
-          # The submission bundle is checked here, on every PR, rather than
-          # only at release: an unflattened bundle fails on arXiv while every
-          # build stays green, so nothing else would ever notice it break.
-          # Every document, not just the ones headed for arXiv -- the check is
-          # really "is this document self-contained once flattened", which is
-          # worth knowing either way.
-          post_compile: sh .github/scripts/arxiv_bundle.sh "${{ matrix.doc }}" arxiv-check
-
-      # Printed on every PR because the closure must not depend on who built:
-      # git is case-sensitive and the Windows filesystem is not, so a locally
-      # computed closure can differ from this one.
-      - name: Print document closure
-        run: python3 .github/scripts/closure.py list "${{ matrix.doc }}"
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.doc }}-pdf
-          path: out/${{ steps.doc.outputs.stem }}.pdf
-          retention-days: 14
-
-      # Handed to version-check below, which cannot recompute them without
-      # running every build a second time.
-      - uses: actions/upload-artifact@v7
-        with:
-          name: build-record-${{ matrix.doc }}
-          path: |
-            out/${{ steps.doc.outputs.stem }}.fls
-            out/${{ steps.doc.outputs.stem }}.fdb_latexmk
-          retention-days: 1
-
-  version-check:
-    name: Validate semver bump
-    needs: [documents, build]
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - uses: actions/download-artifact@v8
-        with:
-          pattern: build-record-*
-          path: records/
-          merge-multiple: true
-
-      - name: Bump exactly the documents this PR touched
-        env:
-          BASE_REF: ${{ github.base_ref }}
-        run: |
-          set -euo pipefail
-          mkdir -p out
-          cp records/* out/
-
-          # A full ref, not a shallow one: the closure diff needs a merge base.
-          git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
-          BASE="origin/${BASE_REF}"
-          git show "${BASE}:docs.toml" > base-docs.toml 2>/dev/null || : > base-docs.toml
-
-          # Which documents did this branch actually change, through their
-          # \input children and references.bib rather than the root file alone?
-          AFFECTED="$(python3 .github/scripts/closure.py affected --base "$BASE")"
-          if [ -z "$AFFECTED" ]; then
-            echo "No document's dependency closure changed — no bump required."
-          else
-            echo "Affected documents: $(echo "$AFFECTED" | tr '\n' ' ')"
-          fi
-
-          # Unquoted on purpose: each id is its own argument, and an empty
-          # AFFECTED must reach check-bump as "--only" with zero ids, meaning
-          # nothing may bump -- not as "no --only", which would demand all of them.
-          python3 .github/scripts/docs.py check-bump --base base-docs.toml --only $AFFECTED
+    uses: pen-sotashimozono/.github/.github/workflows/paper-build.yml@v1
