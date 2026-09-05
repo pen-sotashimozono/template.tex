@@ -27,3 +27,8 @@ jobs:
       # Empty on a tag push, where the pair is read back out of the tag name.
       document: ${{ inputs.document || '' }}
       version: ${{ inputs.version || '' }}
+    secrets:
+      # Empty until the shelf deploy key exists, and the shelve job then says so
+      # and does nothing. Passing it from the start is what makes switching
+      # shelving on a matter of creating one secret and editing no repository.
+      shelf-deploy-key: ${{ secrets.SHELF_DEPLOY_KEY }}
