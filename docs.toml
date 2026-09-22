@@ -32,3 +32,10 @@ version = "0.0.12"
 
 [notes]
 version = "0.0.12"
+
+# `source` (pptx / docx) instead of a root: built to PDF by LibreOffice in CI.
+# See exports.py.
+#
+# [talk]
+# source = "slides/talk.pptx"
+# version = "0.1.0"

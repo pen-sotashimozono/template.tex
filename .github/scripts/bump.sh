@@ -10,18 +10,20 @@
 #
 # --affected asks closure.py which documents this branch actually touched -- the
 # same set CI will demand. It reads the build records under out/, so build
-# first, and it compares commits, so commit the content first.
+# first, and it compares commits, so commit the content first. An export
+# counts as touched when its source changed.
 set -eu
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 DOCS="$ROOT/.github/scripts/docs.py"
 CLOSURE="$ROOT/.github/scripts/closure.py"
+EXPORTS="$ROOT/.github/scripts/exports.py"
 PY="${PYTHON:-python3}"
 command -v "$PY" >/dev/null 2>&1 || PY=python
 
 usage() {
   echo "usage: $0 <document|--affected> [patch|minor|major] [\"summary\"]" >&2
-  echo "documents in docs.toml: $("$PY" "$DOCS" ids | tr '\n' ' ')" >&2
+  echo "documents in docs.toml: $("$PY" "$DOCS" ids --all | tr '\n' ' ')" >&2
   exit 1
 }
 
@@ -34,12 +36,13 @@ case "$KIND" in patch|minor|major) ;; *) usage ;; esac
 if [ "$TARGET" = "--affected" ]; then
   BASE=main
   git -C "$ROOT" rev-parse --verify --quiet "$BASE" >/dev/null || BASE=origin/main
-  AFFECTED="$("$PY" "$CLOSURE" affected --base "$BASE" 2>/dev/null || true)"
+  AFFECTED="$("$PY" "$CLOSURE" affected --base "$BASE" 2>/dev/null || true)
+$("$PY" "$EXPORTS" affected --base "$BASE" 2>/dev/null || true)"
 
   # A document absent from the base branch is new, and the version check
   # accepts whatever version it arrives with -- there is nothing to step from.
   # Bumping it here would push it off its intended initial version.
-  BASE_DOCS="$(git -C "$ROOT" show "$BASE:docs.toml" 2>/dev/null > "$ROOT/.base-docs.tmp"     && "$PY" "$DOCS" ids --file "$ROOT/.base-docs.tmp" 2>/dev/null || true)"
+  BASE_DOCS="$(git -C "$ROOT" show "$BASE:docs.toml" 2>/dev/null > "$ROOT/.base-docs.tmp"     && "$PY" "$DOCS" ids --all --file "$ROOT/.base-docs.tmp" 2>/dev/null || true)"
   rm -f "$ROOT/.base-docs.tmp"
 
   DOC_LIST=''
@@ -80,13 +83,25 @@ for DOC in $DOC_LIST; do
     echo "CHANGELOG.md: entry for $TAG already present, left alone"
     continue
   fi
-  entry="## $TAG — $(date +%Y-%m-%d)
-
-${SUMMARY:-TODO: one paragraph on what changed and why.}"
-  awk -v mark="$MARK" -v entry="$entry" '
+  # The entry goes through a file, not `awk -v`. A -v assignment carrying a
+  # raw newline is rejected by BWK awk (macOS) with "newline in string" -- and
+  # awk still exits 0, so `set -e` does not catch it and the entry is dropped
+  # while the script reports success. Release.yml lifts this entry out by exact
+  # match, so a dropped entry ships an empty release body.
+  ENTRY="$LOG.entry.tmp"
+  printf '## %s — %s\n\n%s\n' "$TAG" "$(date +%Y-%m-%d)" \
+    "${SUMMARY:-TODO: one paragraph on what changed and why.}" > "$ENTRY"
+  awk -v mark="$MARK" -v ef="$ENTRY" '
     { print }
-    $0 == mark && !done { print ""; print entry; done = 1 }
+    $0 == mark && !done {
+      print ""
+      while ((getline line < ef) > 0) print line
+      close(ef)
+      done = 1
+    }
   ' "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+  rm -f "$ENTRY"
+  grep -q "^## $TAG " "$LOG" || { echo "CHANGELOG.md: entry for $TAG was not written" >&2; exit 1; }
   echo "CHANGELOG.md: added an entry for $TAG"
   if [ -z "$SUMMARY" ]; then
     echo "  (fill in the TODO before opening the PR)"

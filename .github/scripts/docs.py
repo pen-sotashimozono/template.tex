@@ -10,11 +10,15 @@ follows from it -- root file, build output, release tag:
 document iff it carries `version`. This is the only version authority; there is
 no VERSION file.
 
+A table with `source` (pptx / docx) instead of a root is an export, see
+exports.py. `ids`, `root` and `check-bump` see LaTeX documents only.
+
 Writes rewrite the single `version = "..."` line in place. A TOML dumper would
 reformat the file and drop every comment, and docs.toml is read by hand.
 
 Usage:
-    python .github/scripts/docs.py ids [--json] [--file F]      # document ids
+    python .github/scripts/docs.py ids [--json] [--all] [--file F]  # LaTeX ids; --all adds exports
+    python .github/scripts/docs.py kind <id>                    # tex | export
     python .github/scripts/docs.py root <id>                    # root .tex path
     python .github/scripts/docs.py version <id>                 # current version
     python .github/scripts/docs.py tag <id>                     # v<version>-<id>
@@ -46,16 +50,51 @@ SEMVER = re.compile(r"^(\d+)\.(\d+)\.(\d+)$")
 TABLE_LINE = re.compile(r"^\s*\[([^\[\]]+)\]")
 VERSION_LINE = re.compile(r"""^(\s*version\s*=\s*)(["'])([^"']*)\2(.*)$""")
 
+EXPORTABLE = {".pptx", ".docx"}
+# Tags are v<version>-<id>, split at the last '-', and ids reach shell and
+# file names in CI.
+DOC_ID = re.compile(r"^[A-Za-z0-9_]+$")
 
-def load(path: pathlib.Path = MANIFEST) -> dict[str, dict]:
-    """Document tables only -- anything without `version` is configuration."""
+
+def kind_of(doc_id: str, table: dict) -> str:
+    """'tex' for a LaTeX root, 'export' for an Office source."""
+    if "source" not in table:
+        return "tex"
+    where = f"docs.toml [{doc_id}]"
+    if "root" in table:
+        sys.exit(f"{where}: give either `root` (LaTeX) or `source` (export), not both")
+    source = table["source"]
+    if not isinstance(source, str) or pathlib.PurePath(source).is_absolute() or \
+            not (ROOT / source).resolve().is_relative_to(ROOT.resolve()):
+        sys.exit(f"{where}: source must be a path inside the repository; got {source!r}")
+    suffix = pathlib.PurePath(source).suffix.lower()
+    if suffix not in EXPORTABLE:
+        sys.exit(f"{where}: cannot export '{suffix}' sources; expected one of "
+                 f"{', '.join(sorted(EXPORTABLE))} (a LaTeX document uses `root`)")
+    return "export"
+
+
+def load_all(path: pathlib.Path = MANIFEST) -> dict[str, dict]:
+    """Every table with `version`, LaTeX and export alike."""
     with path.open("rb") as fh:
         data = tomllib.load(fh)
-    return {
+    docs = {
         name: table
         for name, table in data.items()
         if isinstance(table, dict) and "version" in table
     }
+    for name, table in docs.items():
+        if not DOC_ID.match(name):
+            sys.exit(f"docs.toml [{name}]: a document id may hold only letters, digits and '_'")
+        if not isinstance(table["version"], str):
+            sys.exit(f"docs.toml [{name}]: version must be a string, e.g. \"0.1.0\"")
+        kind_of(name, table)
+    return docs
+
+
+def load(path: pathlib.Path = MANIFEST) -> dict[str, dict]:
+    """LaTeX documents only."""
+    return {name: t for name, t in load_all(path).items() if kind_of(name, t) == "tex"}
 
 
 def root_of(doc_id: str, docs: dict[str, dict]) -> str:
@@ -176,8 +215,8 @@ def check_step(base_path: pathlib.Path) -> int:
     seconds, and it still runs when a build fails, which is exactly when the
     closure-driven check cannot run at all.
     """
-    head = load()
-    base = load(base_path)
+    head = load_all()
+    base = load_all(base_path)
 
     errors: list[str] = []
     for doc_id, table in head.items():
@@ -224,8 +263,10 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     p_ids = sub.add_parser("ids", help="print document ids")
     p_ids.add_argument("--json", action="store_true", help="as a JSON array, for an Actions matrix")
+    p_ids.add_argument("--all", action="store_true", help="exports too, not only LaTeX documents")
     p_ids.add_argument("--file", type=pathlib.Path, default=MANIFEST, help="read another manifest")
     for name, help_text in (
+        ("kind", "print tex or export"),
         ("root", "print a document's root .tex"),
         ("version", "print a document's version"),
         ("tag", "print a document's release tag"),
@@ -251,10 +292,11 @@ def main() -> int:
     if args.command == "check-step":
         return check_step(args.base)
 
-    docs = load(args.file) if args.command == "ids" else load()
     if args.command == "ids":
+        docs = load_all(args.file) if args.all else load(args.file)
         print(json.dumps(list(docs)) if args.json else "\n".join(docs))
         return 0
+    docs = load_all()
     if args.command == "init":
         parse(args.version, "init")
         write_version(list(docs), args.version)
@@ -264,7 +306,11 @@ def main() -> int:
     if args.doc not in docs:
         sys.exit(f"unknown document '{args.doc}'; docs.toml has: {', '.join(docs) or '(none)'}")
 
-    if args.command == "root":
+    if args.command == "kind":
+        print(kind_of(args.doc, docs[args.doc]))
+    elif args.command == "root":
+        if kind_of(args.doc, docs[args.doc]) != "tex":
+            sys.exit(f"{args.doc} is an export ({docs[args.doc]['source']}); it has no root .tex")
         print(root_of(args.doc, docs))
     elif args.command == "version":
         print(docs[args.doc]["version"])

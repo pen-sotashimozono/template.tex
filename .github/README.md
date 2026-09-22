@@ -14,6 +14,7 @@ carries its own preamble, so either ships alone.
 - **Multiple root documents**: `docs.toml` lists them; the build matrix, tags and releases are generated from it
 - **Two version checks**: a fast one allowing only a single semver step, and a closure-driven one requiring a bump for exactly the documents the PR touched
 - **Per-document releases**: `v1.2.3-main`, `v0.4.0-notes`, each with its own PDF and its own latexdiff
+- **Office exports**: pptx / docx on the same version ladder — CI builds the PDF with LibreOffice, and the release carries the source and the PDF
 - **arXiv bundle**: flattened `.tex` + `.bbl` + figures, compiled in isolation on every PR to prove it still builds
 - **DOI verification** against Crossref/arXiv via [doiget](https://github.com/sotashimozono/doiget)
 - **Dependabot** for GitHub Actions

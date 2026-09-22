@@ -1,0 +1,117 @@
+name: Export Release
+
+# Releases an export as v<version>-<id>: its source and the PDF built here, no
+# diff. Called by Release.yml; mirrors paper-release.yml.
+
+on:
+  workflow_call:
+    inputs:
+      document:
+        description: "Export id as it appears in docs.toml."
+        type: string
+        required: true
+      version:
+        description: "Version without 'v' prefix."
+        type: string
+        required: true
+      dispatched:
+        description: "True when no tag exists yet, so this run creates it."
+        type: boolean
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-v${{ inputs.version }}-${{ inputs.document }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify version
+        env:
+          DOC: ${{ inputs.document }}
+          VER: ${{ inputs.version }}
+        run: |
+          EXPECTED="$(python3 .github/scripts/docs.py version "$DOC")"
+          if [ "$VER" != "$EXPECTED" ]; then
+            echo "ERROR: ${DOC} is at ${EXPECTED} in docs.toml, but this release is for ${VER}"
+            exit 1
+          fi
+
+      - uses: ./.github/actions/libreoffice
+
+      - name: Build and collect assets
+        id: meta
+        env:
+          DOC: ${{ inputs.document }}
+          VER: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          TAG="v${VER}-${DOC}"
+          SRC="$(python3 .github/scripts/exports.py source "$DOC")"
+          python3 .github/scripts/exports.py build "$DOC"
+          mkdir release
+          cp "$SRC" "release/${TAG}.${SRC##*.}"
+          cp "out/${DOC}.pdf" "release/${TAG}.pdf"
+          ls -1 release/
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag (dispatched runs only)
+        if: inputs.dispatched
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
+            echo "Tag ${TAG} already exists on remote — skipping"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "${TAG}"
+            git push origin "${TAG}"
+          fi
+
+      - name: Compose release notes
+        env:
+          DOC: ${{ inputs.document }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          PREV=$(git tag --list "v*-${DOC}" --sort=-v:refname | grep -v "^${TAG}$" | head -1 || true)
+          ENTRY=""
+          if [ -f .github/CHANGELOG.md ]; then
+            # Leading blank lines dropped here, trailing ones by $( ).
+            ENTRY="$(awk -v v="## ${TAG} " '
+              index($0, v) == 1 { on = 1; next }
+              on && /^## / { exit }
+              on { print }
+            ' .github/CHANGELOG.md | sed '/./,$!d')"
+          fi
+          {
+            if [ -n "$ENTRY" ]; then
+              printf '%s\n\n' "$ENTRY"
+            fi
+            echo "The PDF was built from the source with LibreOffice in CI, for reading without Office; line breaks may differ slightly. The attached source is the exact layout."
+            if [ -n "$PREV" ]; then
+              echo
+              echo "### Commits since ${PREV}"
+              echo
+              git log --no-merges --format='- %s' "${PREV}..HEAD"
+            fi
+          } > release_notes.md
+          cat release_notes.md
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          files: release/*
+          body_path: release_notes.md
+          fail_on_unmatched_files: true

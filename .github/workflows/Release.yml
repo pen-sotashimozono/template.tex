@@ -1,7 +1,8 @@
 name: Release
 
-# Thin caller. Keep this file name: AutoRelease.yml dispatches it by name, and
-# the reusable workflow cannot be dispatched directly.
+# Keep this file name: AutoRelease.yml dispatches it by name, and a reusable
+# workflow cannot be dispatched directly. `route` sends LaTeX documents to
+# paper-release and exports to ExportRelease.yml.
 
 on:
   push:
@@ -19,7 +20,34 @@ permissions:
   contents: write
 
 jobs:
+  route:
+    name: Route by document kind
+    runs-on: ubuntu-latest
+    outputs:
+      kind: ${{ steps.r.outputs.kind }}
+      document: ${{ steps.r.outputs.document }}
+      version: ${{ steps.r.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      # Same parse as paper-release.yml.
+      - id: r
+        env:
+          IN_DOCUMENT: ${{ inputs.document }}
+          IN_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "$IN_DOCUMENT" ]; then
+            DOC="$IN_DOCUMENT"; VER="$IN_VERSION"
+          else
+            DOC="${GITHUB_REF_NAME##*-}"; VER="${GITHUB_REF_NAME%-*}"; VER="${VER#v}"
+          fi
+          KIND="$(python3 .github/scripts/docs.py kind "$DOC")"
+          echo "${DOC} ${VER}: ${KIND}"
+          { echo "kind=${KIND}"; echo "document=${DOC}"; echo "version=${VER}"; } >> "$GITHUB_OUTPUT"
+
   release:
+    needs: route
+    if: needs.route.outputs.kind == 'tex'
     uses: pen-sotashimozono/.github/.github/workflows/paper-release.yml@v1
     permissions:
       contents: write
@@ -32,3 +60,14 @@ jobs:
       # and does nothing. Passing it from the start is what makes switching
       # shelving on a matter of creating one secret and editing no repository.
       shelf-deploy-key: ${{ secrets.SHELF_DEPLOY_KEY }}
+
+  export:
+    needs: route
+    if: needs.route.outputs.kind == 'export'
+    uses: ./.github/workflows/ExportRelease.yml
+    permissions:
+      contents: write
+    with:
+      document: ${{ needs.route.outputs.document }}
+      version: ${{ needs.route.outputs.version }}
+      dispatched: ${{ github.event_name == 'workflow_dispatch' }}

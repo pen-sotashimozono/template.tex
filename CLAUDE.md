@@ -31,8 +31,9 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `docs.toml` | root documents and versions — the version authority |
 | `refs/`, `refs/src/` | one PDF per bibkey; full text for grepping |
 | `figures/`, `notes/` | figures (PDF only); children of `notes.tex` |
+| `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
-| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh` |
+| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `exports.py`, `soffice_pdf.py` |
 | `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget) |
 | `out/` | build output (gitignored) |
 
@@ -52,7 +53,8 @@ git add docs.toml .github/CHANGELOG.md
 ```
 
 `--affected` asks `closure.py` which documents actually changed, through their
-`\input` children and `references.bib`. **Build first** (it reads `out/`) and
+`\input` children and `references.bib` — and `exports.py` which exports' source
+files changed. **Build first** (it reads `out/`) and
 **commit the content first** (it compares commits, not the working tree). A
 document not yet on `main` is new: any version is accepted and `--affected`
 skips it. The **`changelog` skill** carries this.
@@ -126,6 +128,45 @@ Greek letters.
   and note the absence.
 
 `strict` is `"false"`: unresolvable entries warn. Set `"true"` to block.
+
+## Exports — pptx / docx on the same version ladder
+
+Slides and reports written in Office are documents like any other: a
+`docs.toml` table with a `version`, bumped with `bump.sh`, tagged
+`v<version>-<id>` and released on merge. The difference is a `source` in place
+of a root:
+
+    [talk]
+    source = "slides/talk.pptx"   ->  out/talk.pdf
+    version = "0.1.0"             ->  release v0.1.0-talk
+
+`Export CI` builds the PDF with LibreOffice on every PR (artifact
+`<id>-pdf`), as `LaTeX CI` does for the `.tex` roots, and checks that the
+version moved exactly when the source did — an export's closure is its source
+file. `Release.yml` routes each tag by kind: an export's release carries
+`<tag>.pptx` (or `.docx`) and `<tag>.pdf`, no diff. Only the source is
+committed.
+
+```sh
+python3 .github/scripts/exports.py build talk   # locally, if soffice is installed
+./.github/scripts/bump.sh talk patch "One line on what changed."
+python3 -m unittest discover -s .github/scripts/tests   # after touching the scripts
+```
+
+An id may hold only letters, digits and `_` (tags split at the last `-`); a
+`source` must be a relative path inside the repository.
+
+The runner has no Office fonts. `.github/actions/libreoffice/fonts.conf` maps
+游ゴシック / Hiragino / Meiryo to Noto Sans CJK JP, the Mincho faces to Noto
+Serif CJK JP and Calibri to Carlito, and hides the Chinese / Korean CJK faces
+LibreOffice would otherwise pick for text with no East Asian font.
+`soffice_pdf.py` turns off LibreOffice's Asian/Latin gap for pptx, which
+PowerPoint does not add. Glyph widths still differ, so a line may break at a
+different word; the release's pptx is the exact layout. Using Noto fonts in
+the deck makes the two match.
+
+git stores every committed source whole, so commit at milestones (first draft,
+before rehearsal, as given or submitted) rather than on every save.
 
 ## Before opening a PR
 

@@ -44,3 +44,6 @@ _minted*/
 # figures/ は PDF で管理するため除外しない
 !figures/
 !figures/**
+
+# PowerPoint / Office lock files
+~$*
