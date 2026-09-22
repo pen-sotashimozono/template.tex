@@ -21,7 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - id: ids
-        run: echo "ids=$(python3 .github/scripts/exports.py ids --json)" >> "$GITHUB_OUTPUT"
+        run: |
+          IDS="$(python3 .github/scripts/exports.py ids --json)"
+          echo "ids=${IDS}" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build ${{ matrix.doc }}
@@ -43,7 +45,9 @@ jobs:
       - if: steps.src.outputs.present == 'true'
         uses: ./.github/actions/libreoffice
       - if: steps.src.outputs.present == 'true'
-        run: python3 .github/scripts/exports.py build "${{ matrix.doc }}"
+        env:
+          DOC: ${{ matrix.doc }}
+        run: python3 .github/scripts/exports.py build "$DOC"
       - if: steps.src.outputs.present == 'true'
         uses: actions/upload-artifact@v7
         with:

@@ -38,7 +38,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          for DOC in $(python3 .github/scripts/exports.py ids); do
+          # Assigned first: a failing $(...) in a for list does not trip set -e.
+          IDS="$(python3 .github/scripts/exports.py ids)"
+          for DOC in $IDS; do
             # No source committed yet: nothing to release.
             SRC="$(python3 .github/scripts/exports.py source "$DOC")"
             if [ ! -f "$SRC" ]; then

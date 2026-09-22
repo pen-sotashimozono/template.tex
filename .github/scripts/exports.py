@@ -41,7 +41,8 @@ def git(*args: str) -> subprocess.CompletedProcess:
 def changed_files(base: str) -> set[str]:
     """Files changed since base, as closure.py measures it."""
     out = git("diff", "--name-only", f"{base}...HEAD")
-    out.check_returncode()
+    if out.returncode:
+        sys.exit(f"git diff {base}...HEAD failed: {out.stderr.strip()}")
     return {line for line in out.stdout.splitlines() if line}
 
 
@@ -99,7 +100,8 @@ def check_bump(base_manifest: pathlib.Path, base_ref: str) -> int:
         if doc_id not in base:
             print(f"{doc_id}: new export at {new}. OK")
             continue
-        if git("cat-file", "-e", f"{base_ref}:{table['source']}").returncode != 0:
+        # The base table's own source: a renamed source is a change, not a first one.
+        if git("cat-file", "-e", f"{base_ref}:{base[doc_id]['source']}").returncode != 0:
             print(f"{doc_id}: first source for this export, at {new}. OK")
             continue
         old = base[doc_id]["version"]

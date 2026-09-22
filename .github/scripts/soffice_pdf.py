@@ -54,13 +54,15 @@ def connect(port):
     local = uno.getComponentContext()
     resolver = local.ServiceManager.createInstanceWithContext(
         "com.sun.star.bridge.UnoUrlResolver", local)
+    error = None
     for _ in range(120):
         try:
             return resolver.resolve(
                 f"uno:socket,host=127.0.0.1,port={port};urp;StarOffice.ComponentContext")
-        except Exception:
+        except Exception as e:  # NoConnectException until soffice listens
+            error = e
             time.sleep(0.5)
-    sys.exit("soffice did not come up")
+    sys.exit(f"soffice did not come up: {error}")
 
 
 def main(source, pdf):

@@ -51,6 +51,9 @@ TABLE_LINE = re.compile(r"^\s*\[([^\[\]]+)\]")
 VERSION_LINE = re.compile(r"""^(\s*version\s*=\s*)(["'])([^"']*)\2(.*)$""")
 
 EXPORTABLE = {".pptx", ".docx"}
+# Tags are v<version>-<id>, split at the last '-', and ids reach shell and
+# file names in CI.
+DOC_ID = re.compile(r"^[A-Za-z0-9_]+$")
 
 
 def kind_of(doc_id: str, table: dict) -> str:
@@ -60,7 +63,11 @@ def kind_of(doc_id: str, table: dict) -> str:
     where = f"docs.toml [{doc_id}]"
     if "root" in table:
         sys.exit(f"{where}: give either `root` (LaTeX) or `source` (export), not both")
-    suffix = pathlib.PurePath(table["source"]).suffix.lower()
+    source = table["source"]
+    if not isinstance(source, str) or pathlib.PurePath(source).is_absolute() or \
+            not (ROOT / source).resolve().is_relative_to(ROOT.resolve()):
+        sys.exit(f"{where}: source must be a path inside the repository; got {source!r}")
+    suffix = pathlib.PurePath(source).suffix.lower()
     if suffix not in EXPORTABLE:
         sys.exit(f"{where}: cannot export '{suffix}' sources; expected one of "
                  f"{', '.join(sorted(EXPORTABLE))} (a LaTeX document uses `root`)")
@@ -77,6 +84,10 @@ def load_all(path: pathlib.Path = MANIFEST) -> dict[str, dict]:
         if isinstance(table, dict) and "version" in table
     }
     for name, table in docs.items():
+        if not DOC_ID.match(name):
+            sys.exit(f"docs.toml [{name}]: a document id may hold only letters, digits and '_'")
+        if not isinstance(table["version"], str):
+            sys.exit(f"docs.toml [{name}]: version must be a string, e.g. \"0.1.0\"")
         kind_of(name, table)
     return docs
 
