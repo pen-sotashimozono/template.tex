@@ -1,0 +1,28 @@
+name: Script Tests
+
+# docs.py / exports.py against throwaway repositories, and a real LibreOffice
+# build of the fixtures. Runs only when the machinery changes.
+
+on:
+  pull_request:
+    paths:
+      - ".github/scripts/**"
+      - ".github/actions/**"
+      - ".github/workflows/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/scripts/**"
+      - ".github/actions/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/libreoffice
+      - run: python3 -m unittest discover -s .github/scripts/tests -v

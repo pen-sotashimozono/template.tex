@@ -150,7 +150,11 @@ committed.
 ```sh
 python3 .github/scripts/exports.py build talk   # locally, if soffice is installed
 ./.github/scripts/bump.sh talk patch "One line on what changed."
+python3 -m unittest discover -s .github/scripts/tests   # after touching the scripts
 ```
+
+An id may hold only letters, digits and `_` (tags split at the last `-`); a
+`source` must be a relative path inside the repository.
 
 The runner has no Office fonts. `.github/actions/libreoffice/fonts.conf` maps
 游ゴシック / Hiragino / Meiryo to Noto Sans CJK JP, the Mincho faces to Noto
