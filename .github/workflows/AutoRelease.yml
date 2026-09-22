@@ -40,7 +40,7 @@ jobs:
           set -euo pipefail
           for DOC in $(python3 .github/scripts/exports.py ids); do
             # No source committed yet: nothing to release.
-            SRC="$(python3 .github/scripts/exports.py paths "$DOC" | head -1)"
+            SRC="$(python3 .github/scripts/exports.py source "$DOC")"
             if [ ! -f "$SRC" ]; then
               echo "${DOC}: no source committed yet. No release."
               continue

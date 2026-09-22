@@ -33,7 +33,7 @@ version = "0.0.12"
 [notes]
 version = "0.0.12"
 
-# `source` (pptx / docx) instead of a root: exported by hand, not built.
+# `source` (pptx / docx) instead of a root: built to PDF by LibreOffice in CI.
 # See exports.py.
 #
 # [talk]

@@ -1,0 +1,67 @@
+name: Export CI
+
+# Builds every export's PDF with LibreOffice, as latex-ci.yml does for the
+# LaTeX documents, and on a PR checks its version moved exactly with its source.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  enumerate:
+    name: Enumerate exports
+    runs-on: ubuntu-latest
+    outputs:
+      ids: ${{ steps.ids.outputs.ids }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: ids
+        run: echo "ids=$(python3 .github/scripts/exports.py ids --json)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.doc }}
+    needs: enumerate
+    if: needs.enumerate.outputs.ids != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        doc: ${{ fromJSON(needs.enumerate.outputs.ids) }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: src
+        env:
+          DOC: ${{ matrix.doc }}
+        run: |
+          SRC="$(python3 .github/scripts/exports.py source "$DOC")"
+          if [ -f "$SRC" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "$DOC: no $SRC yet"; fi
+      - if: steps.src.outputs.present == 'true'
+        uses: ./.github/actions/libreoffice
+      - if: steps.src.outputs.present == 'true'
+        run: python3 .github/scripts/exports.py build "${{ matrix.doc }}"
+      - if: steps.src.outputs.present == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.doc }}-pdf
+          path: out/${{ matrix.doc }}.pdf
+
+  version:
+    name: Validate export bump
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "+refs/heads/${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          git show "origin/${BASE_REF}:docs.toml" > base-docs.toml 2>/dev/null || : > base-docs.toml
+          python3 .github/scripts/exports.py check-bump --base base-docs.toml --base-ref "origin/${BASE_REF}"

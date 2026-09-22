@@ -31,9 +31,9 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `docs.toml` | root documents and versions — the version authority |
 | `refs/`, `refs/src/` | one PDF per bibkey; full text for grepping |
 | `figures/`, `notes/` | figures (PDF only); children of `notes.tex` |
-| `slides/` (or anywhere) | pptx / docx exports, each with its PDF and `.pdf.sha256` stamp |
+| `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
-| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `exports.py`, `office2pdf.sh` |
+| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `exports.py`, `soffice_pdf.py` |
 | `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget) |
 | `out/` | build output (gitignored) |
 
@@ -137,33 +137,29 @@ Slides and reports written in Office are documents like any other: a
 of a root:
 
     [talk]
-    source = "slides/talk.pptx"   ->  slides/talk.pdf + .pdf.sha256
+    source = "slides/talk.pptx"   ->  out/talk.pdf
     version = "0.1.0"             ->  release v0.1.0-talk
 
-`docs.py` calls such a document an *export* and keeps it out of everything that
-builds (`ids`, `root`, the closure check); `ids --all` and `kind <id>` see it.
-`Release.yml` routes each tag by kind: a LaTeX document gets the build, the
-diff and the arXiv bundle; an export gets `<tag>.pptx` (or `.docx`) and
-`<tag>.pdf` — its source and PDF as committed, no diff.
-
-The PDF is never rendered in CI — every headless converter swaps the Japanese
-fonts and moves the layout. It is exported from Office on the Mac (PowerPoint
-for pptx, Word for docx) and stamped with the hash of the source:
+`Export CI` builds the PDF with LibreOffice on every PR (artifact
+`<id>-pdf`), as `LaTeX CI` does for the `.tex` roots, and checks that the
+version moved exactly when the source did — an export's closure is its source
+file. `Release.yml` routes each tag by kind: an export's release carries
+`<tag>.pptx` (or `.docx`) and `<tag>.pdf`, no diff. Only the source is
+committed.
 
 ```sh
-./.github/scripts/office2pdf.sh talk    # close the file in Office first
-git add slides/talk.pptx slides/talk.pdf slides/talk.pdf.sha256
-git commit -m "..."
-./.github/scripts/bump.sh --affected patch "One line on what changed."
+python3 .github/scripts/exports.py build talk   # locally, if soffice is installed
+./.github/scripts/bump.sh talk patch "One line on what changed."
 ```
 
-Without Office, export the PDF with anything and run
-`python3 .github/scripts/exports.py stamp <id>`.
-
-`ExportCheck.yml` fails when the committed PDF was not exported from the
-committed source, and when an export's version did not move exactly with its
-source — the export's closure is its source file. The first source committed
-for an export ships at the version the table already has.
+The runner has no Office fonts. `.github/actions/libreoffice/fonts.conf` maps
+游ゴシック / Hiragino / Meiryo to Noto Sans CJK JP, the Mincho faces to Noto
+Serif CJK JP and Calibri to Carlito, and hides the Chinese / Korean CJK faces
+LibreOffice would otherwise pick for text with no East Asian font.
+`soffice_pdf.py` turns off LibreOffice's Asian/Latin gap for pptx, which
+PowerPoint does not add. Glyph widths still differ, so a line may break at a
+different word; the release's pptx is the exact layout. Using Noto fonts in
+the deck makes the two match.
 
 git stores every committed source whole, so commit at milestones (first draft,
 before rehearsal, as given or submitted) rather than on every save.

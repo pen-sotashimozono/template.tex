@@ -1,7 +1,7 @@
 name: Export Release
 
-# Releases an export as v<version>-<id>: its source and PDF, no diff.
-# Called by Release.yml; mirrors paper-release.yml.
+# Releases an export as v<version>-<id>: its source and the PDF built here, no
+# diff. Called by Release.yml; mirrors paper-release.yml.
 
 on:
   workflow_call:
@@ -35,24 +35,32 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify and collect assets
+      - name: Verify version
+        env:
+          DOC: ${{ inputs.document }}
+          VER: ${{ inputs.version }}
+        run: |
+          EXPECTED="$(python3 .github/scripts/docs.py version "$DOC")"
+          if [ "$VER" != "$EXPECTED" ]; then
+            echo "ERROR: ${DOC} is at ${EXPECTED} in docs.toml, but this release is for ${VER}"
+            exit 1
+          fi
+
+      - uses: ./.github/actions/libreoffice
+
+      - name: Build and collect assets
         id: meta
         env:
           DOC: ${{ inputs.document }}
           VER: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          EXPECTED="$(python3 .github/scripts/docs.py version "$DOC")"
-          if [ "$VER" != "$EXPECTED" ]; then
-            echo "ERROR: ${DOC} is at ${EXPECTED} in docs.toml, but this release is for ${VER}"
-            exit 1
-          fi
-          python3 .github/scripts/exports.py check --strict "$DOC"
           TAG="v${VER}-${DOC}"
-          { read -r SRC; read -r PDF; read -r _; } < <(python3 .github/scripts/exports.py paths "$DOC")
+          SRC="$(python3 .github/scripts/exports.py source "$DOC")"
+          python3 .github/scripts/exports.py build "$DOC"
           mkdir release
           cp "$SRC" "release/${TAG}.${SRC##*.}"
-          cp "$PDF" "release/${TAG}.pdf"
+          cp "out/${DOC}.pdf" "release/${TAG}.pdf"
           ls -1 release/
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
@@ -91,7 +99,7 @@ jobs:
             if [ -n "$ENTRY" ]; then
               printf '%s\n\n' "$ENTRY"
             fi
-            echo "The PDF was exported from the source in Office (\`.github/scripts/office2pdf.sh\`); both are attached as committed."
+            echo "The PDF was built from the source with LibreOffice in CI, for reading without Office; line breaks may differ slightly. The attached source is the exact layout."
             if [ -n "$PREV" ]; then
               echo
               echo "### Commits since ${PREV}"
