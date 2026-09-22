@@ -83,13 +83,25 @@ for DOC in $DOC_LIST; do
     echo "CHANGELOG.md: entry for $TAG already present, left alone"
     continue
   fi
-  entry="## $TAG — $(date +%Y-%m-%d)
-
-${SUMMARY:-TODO: one paragraph on what changed and why.}"
-  awk -v mark="$MARK" -v entry="$entry" '
+  # The entry goes through a file, not `awk -v`. A -v assignment carrying a
+  # raw newline is rejected by BWK awk (macOS) with "newline in string" -- and
+  # awk still exits 0, so `set -e` does not catch it and the entry is dropped
+  # while the script reports success. Release.yml lifts this entry out by exact
+  # match, so a dropped entry ships an empty release body.
+  ENTRY="$LOG.entry.tmp"
+  printf '## %s — %s\n\n%s\n' "$TAG" "$(date +%Y-%m-%d)" \
+    "${SUMMARY:-TODO: one paragraph on what changed and why.}" > "$ENTRY"
+  awk -v mark="$MARK" -v ef="$ENTRY" '
     { print }
-    $0 == mark && !done { print ""; print entry; done = 1 }
+    $0 == mark && !done {
+      print ""
+      while ((getline line < ef) > 0) print line
+      close(ef)
+      done = 1
+    }
   ' "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+  rm -f "$ENTRY"
+  grep -q "^## $TAG " "$LOG" || { echo "CHANGELOG.md: entry for $TAG was not written" >&2; exit 1; }
   echo "CHANGELOG.md: added an entry for $TAG"
   if [ -z "$SUMMARY" ]; then
     echo "  (fill in the TODO before opening the PR)"
