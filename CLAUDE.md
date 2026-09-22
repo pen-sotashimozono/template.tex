@@ -31,8 +31,9 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `docs.toml` | root documents and versions — the version authority |
 | `refs/`, `refs/src/` | one PDF per bibkey; full text for grepping |
 | `figures/`, `notes/` | figures (PDF only); children of `notes.tex` |
+| `slides/` (or anywhere) | pptx / docx exports, each with its PDF and `.pdf.sha256` stamp |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
-| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh` |
+| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `exports.py`, `office2pdf.sh` |
 | `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget) |
 | `out/` | build output (gitignored) |
 
@@ -52,7 +53,8 @@ git add docs.toml .github/CHANGELOG.md
 ```
 
 `--affected` asks `closure.py` which documents actually changed, through their
-`\input` children and `references.bib`. **Build first** (it reads `out/`) and
+`\input` children and `references.bib` — and `exports.py` which exports' source
+files changed. **Build first** (it reads `out/`) and
 **commit the content first** (it compares commits, not the working tree). A
 document not yet on `main` is new: any version is accepted and `--affected`
 skips it. The **`changelog` skill** carries this.
@@ -126,6 +128,45 @@ Greek letters.
   and note the absence.
 
 `strict` is `"false"`: unresolvable entries warn. Set `"true"` to block.
+
+## Exports — pptx / docx on the same version ladder
+
+Slides and reports written in Office are documents like any other: a
+`docs.toml` table with a `version`, bumped with `bump.sh`, tagged
+`v<version>-<id>` and released on merge. The difference is a `source` in place
+of a root:
+
+    [talk]
+    source = "slides/talk.pptx"   ->  slides/talk.pdf + .pdf.sha256
+    version = "0.1.0"             ->  release v0.1.0-talk
+
+`docs.py` calls such a document an *export* and keeps it out of everything that
+builds (`ids`, `root`, the closure check); `ids --all` and `kind <id>` see it.
+`Release.yml` routes each tag by kind: a LaTeX document gets the build, the
+diff and the arXiv bundle; an export gets `<tag>.pptx` (or `.docx`) and
+`<tag>.pdf` — its source and PDF as committed, no diff.
+
+The PDF is never rendered in CI — every headless converter swaps the Japanese
+fonts and moves the layout. It is exported from Office on the Mac (PowerPoint
+for pptx, Word for docx) and stamped with the hash of the source:
+
+```sh
+./.github/scripts/office2pdf.sh talk    # close the file in Office first
+git add slides/talk.pptx slides/talk.pdf slides/talk.pdf.sha256
+git commit -m "..."
+./.github/scripts/bump.sh --affected patch "One line on what changed."
+```
+
+Without Office, export the PDF with anything and run
+`python3 .github/scripts/exports.py stamp <id>`.
+
+`ExportCheck.yml` fails when the committed PDF was not exported from the
+committed source, and when an export's version did not move exactly with its
+source — the export's closure is its source file. The first source committed
+for an export ships at the version the table already has.
+
+git stores every committed source whole, so commit at milestones (first draft,
+before rehearsal, as given or submitted) rather than on every save.
 
 ## Before opening a PR
 

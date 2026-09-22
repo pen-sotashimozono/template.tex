@@ -3,6 +3,7 @@ name: Auto Release
 # Thin caller. The merged guard is repeated inside the reusable workflow, since
 # a pull_request checkout resolves to the PR's own tree and a closed-unmerged
 # PR would otherwise release the bump it was carrying.
+# `docs.py ids` lists LaTeX documents only, so exports get their own job.
 
 on:
   pull_request:
@@ -20,3 +21,36 @@ jobs:
     permissions:
       contents: write
       actions: write
+
+  exports:
+    name: Tag and release each export with a new version
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - name: Dispatch a release per newly bumped export
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for DOC in $(python3 .github/scripts/exports.py ids); do
+            # No source committed yet: nothing to release.
+            SRC="$(python3 .github/scripts/exports.py paths "$DOC" | head -1)"
+            if [ ! -f "$SRC" ]; then
+              echo "${DOC}: no source committed yet. No release."
+              continue
+            fi
+            V="$(python3 .github/scripts/docs.py version "$DOC")"
+            TAG="$(python3 .github/scripts/docs.py tag "$DOC")"
+            if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
+              echo "${DOC}: ${TAG} already exists — version was not bumped. No release."
+              continue
+            fi
+            echo "${DOC}: new version ${V} — dispatching Release.yml for ${TAG}."
+            gh workflow run Release.yml --ref main --field document="${DOC}" --field version="${V}"
+          done
