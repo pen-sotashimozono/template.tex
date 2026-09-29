@@ -3,7 +3,8 @@ name: Initialize from template
 # Runs once in a repository generated from this template, then deletes itself.
 # Resets every document to 0.1.0, clears the template's changelog, removes
 # LICENSE, which covers the template rather than the work written with it,
-# and re-pins the tikz-tensors submodule, which the copy leaves empty.
+# re-pins the tikz-tensors submodule, which the copy leaves empty, and deletes
+# SyncTikzTensors.yml, which only the template runs.
 #
 # Guarded twice: is_template is true only in the template repository itself,
 # and the slug exclusion is a backstop. Self-deletion is the third.
@@ -69,11 +70,16 @@ jobs:
           # empty. Pin it afresh at its newest release; this stages both.
           .github/tools/figures/tikz-tensors.sh ensure
 
+          # The daily sync keeps the template itself on tikz-tensors' main; a
+          # project moves when it chooses (tikz-tensors.sh pin), so it goes.
+          rm -f .github/workflows/SyncTikzTensors.yml
+
           rm .github/workflows/Initialize.yml
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add docs.toml .github/CHANGELOG.md LICENSE .github/workflows/Initialize.yml
+          git add docs.toml .github/CHANGELOG.md LICENSE .github/workflows/Initialize.yml \
+            .github/workflows/SyncTikzTensors.yml
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0
