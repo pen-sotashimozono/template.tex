@@ -10,8 +10,8 @@ description: Make or change a figure page - a standalone equation, a TikZ tensor
 
 `figures/` holds only what a writer looks at: pages (`src/`), what they build
 into (`assets/`), and other papers' figures (`papers/`, the `paper-figures`
-skill). The shared files a page uses — `preamble.tex` and the vendored
-`tikz-tensors/` ([pen-sotashimozono/tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors), pinned by `update-tikz-tensors.sh`) — and the
+skill). The shared files a page uses — `preamble.tex` and the
+`tikz-tensors/` ([pen-sotashimozono/tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors), a git submodule: `tikz-tensors.sh status` / `pin <tag>`; edit it in place to change the format, then pin a release) — and the
 build's `latexmkrc` live in `.github/tools/figures/`; build.sh puts that
 directory on TEXINPUTS, so a page just writes `\input{preamble}` and
 `\usepackage{tikz-tensors}` and never names it.

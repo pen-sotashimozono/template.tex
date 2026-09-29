@@ -35,7 +35,7 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
 | `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py` |
-| `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `paper_figures.py`, and `tikz-tensors/` (the vendored TikZ format and theme, pinned by `update-tikz-tensors.sh`) |
+| `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `paper_figures.py`, and `tikz-tensors/` (the TikZ format and theme, a git submodule pinned by `tikz-tensors.sh`) |
 | `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure) |
 | `out/` | build output (gitignored) |
 
@@ -64,9 +64,22 @@ them sits in `.github/tools/figures/`. A `.tex` page starts `\input{preamble}`
 and a tensor diagram adds `\usepackage{tikz-tensors}`
 ([pen-sotashimozono/tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors): wavy legs for continuous arguments, plain lines for finite indices,
 circles for functions, squares for coefficient arrays; `\tnswap`; the shared
-theme's colours). It is vendored at a pinned tag in
-`.github/tools/figures/tikz-tensors/` (`update-tikz-tensors.sh <tag>` moves it;
-the version is its `.sty`'s `\ProvidesPackage` line), so figures build offline.
+theme's colours). It is a git submodule at `.github/tools/figures/tikz-tensors/`,
+so the format can be edited in place while the figures that use it rebuild:
+commit and push from inside it, then pin a release before merging here.
+
+```sh
+.github/tools/figures/tikz-tensors.sh status        # the version, and whether it is a release
+.github/tools/figures/tikz-tensors.sh pin v0.3.0    # build with that release (staged; commit it)
+.github/tools/figures/tikz-tensors.sh pin latest
+```
+
+The version is the `.sty`'s `\ProvidesPackage` line, which `pin` checks against
+the tag. build.sh fetches the submodule itself when a checkout lacks it (a
+clone without `--recurse-submodules`), and `Initialize.yml` re-pins it at the
+newest release in a repository made from this template, because "Use this
+template" copies `.gitmodules` but not the pinned commit. Once fetched,
+figures build offline.
 Pictures are TikZ (a project's own parts go in a `.sty` next to build.sh);
 `.py` pages are for computed plots. build.sh finds the shared files
 through TEXINPUTS and passes

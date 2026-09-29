@@ -4,15 +4,13 @@
 
 No TeX and no network: build.sh is driven with Python pages only (they write
 their SVG directly), arxiv_bundle.sh with stub latexpand / latexmk, and
-update-tikz-tensors.sh with local file:// tarballs.
+tikz-tensors.sh with a local tikz-tensors repository and throwaway projects.
 """
 import importlib.util
-import io
 import os
 import pathlib
 import shutil
 import subprocess
-import tarfile
 import tempfile
 import time
 import unittest
@@ -151,62 +149,116 @@ class ArxivBundle(unittest.TestCase):
         self.assertNotIn("other-fig1.pdf", shipped)
 
 
-def release_tarball(path, tag, files):
-    """A GitHub-style source tarball: everything under one top-level directory."""
-    with tarfile.open(path, "w:gz") as tar:
-        for rel, text in files.items():
-            data = text.encode()
-            info = tarfile.TarInfo(f"tikz-tensors-{tag.lstrip('v')}/{rel}")
-            info.size = len(data)
-            tar.addfile(info, io.BytesIO(data))
+def sty(version):
+    return f"\\ProvidesPackage{{tikz-tensors}}[2026/09/29 v{version} test]\n"
 
 
-FULL = {"tex/tikz-tensors.sty": "% new sty\n", "tex/tikz-tensors-colors.tex": "% new colours\n",
-        "theme/theme.css": "/* new */\n", "theme/tokens.toml": "# new\n", "LICENSE": "MIT\n"}
+class TikzTensorsSubmodule(unittest.TestCase):
+    """tikz-tensors.sh against a local tikz-tensors with releases v0.1.0 and v0.2.0
+    (and a v0.3.0 whose \\ProvidesPackage line wrongly says 0.2.9)."""
 
-
-class UpdateTikzTensors(unittest.TestCase):
     def setUp(self):
-        self.root = tmpdir(self)
-        tools = self.root / "tools"
-        tools.mkdir()
-        shutil.copy(TOOLS / "update-tikz-tensors.sh", tools)
-        self.script = tools / "update-tikz-tensors.sh"
-        self.vendored = tools / "tikz-tensors"
-        (self.vendored / "tex").mkdir(parents=True)
-        (self.vendored / "tex/tikz-tensors.sty").write_text("% old sty\n")
+        root = tmpdir(self)
+        self.env = dict(os.environ, GIT_CONFIG_COUNT="1", GIT_CONFIG_KEY_0="protocol.file.allow",
+                        GIT_CONFIG_VALUE_0="always", GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t",
+                        GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
+        self.origin = root / "tikz-tensors"
+        (self.origin / "tex").mkdir(parents=True)
+        self.git(self.origin, "init", "-q", "-b", "main")
+        for tag, version in (("v0.1.0", "0.1.0"), ("v0.2.0", "0.2.0"), ("v0.3.0", "0.2.9")):
+            (self.origin / "tex/tikz-tensors.sty").write_text(sty(version))
+            self.git(self.origin, "add", "-A")
+            self.git(self.origin, "commit", "-qm", tag)
+            self.git(self.origin, "tag", tag)
+        # v0.3.0 is broken on purpose; the newest good release is what "latest" must not
+        # guess around, so tests that want "latest" delete it first.
+        self.env["TIKZ_TENSORS_URL"] = str(self.origin)
+        self.repo = root / "project"
+        (self.repo / ".github/tools/figures").mkdir(parents=True)
+        shutil.copy(TOOLS / "tikz-tensors.sh", self.repo / ".github/tools/figures/")
+        self.git(self.repo, "init", "-q", "-b", "main")
+        self.git(self.repo, "add", "-A")
+        self.git(self.repo, "commit", "-qm", "project")
+        self.sub = self.repo / ".github/tools/figures/tikz-tensors"
 
-    def run_script(self, tag, url):
-        return subprocess.run(["sh", str(self.script), tag], cwd=self.root, capture_output=True, text=True,
-                              env=dict(os.environ, TIKZ_TENSORS_URL=url))
-
-    def assert_untouched(self):
-        self.assertEqual((self.vendored / "tex/tikz-tensors.sty").read_text(), "% old sty\n")
-        self.assertEqual(sorted(p.name for p in self.vendored.parent.iterdir()),
-                         ["tikz-tensors", "update-tikz-tensors.sh"], "no half-built copy left behind")
-
-    def test_a_release_replaces_the_copy_whole(self):
-        tarball = self.root / "rel.tar.gz"
-        release_tarball(tarball, "v0.2.0", FULL)
-        r = self.run_script("v0.2.0", tarball.as_uri())
+    def git(self, where, *args):
+        r = subprocess.run(["git", "-C", str(where), *args], capture_output=True, text=True, env=self.env)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.vendored / "tex/tikz-tensors.sty").read_text(), "% new sty\n")
-        self.assertTrue((self.vendored / "LICENSE").is_file())
-        self.assertEqual(sorted(p.name for p in self.vendored.iterdir()), ["LICENSE", "tex", "theme"])
+        return r.stdout
 
-    def test_a_failed_download_says_so_and_changes_nothing(self):
-        r = self.run_script("v9.9.9", (self.root / "no-such.tar.gz").as_uri())
-        self.assertNotEqual(r.returncode, 0)
-        self.assertIn("could not download", r.stderr)
-        self.assert_untouched()
+    def script(self, *args, repo=None):
+        return subprocess.run(["sh", ".github/tools/figures/tikz-tensors.sh", *args], cwd=repo or self.repo,
+                              capture_output=True, text=True, env=self.env)
 
-    def test_an_incomplete_release_changes_nothing(self):
-        tarball = self.root / "rel.tar.gz"
-        release_tarball(tarball, "v0.2.0", {k: v for k, v in FULL.items() if k != "LICENSE"})
-        r = self.run_script("v0.2.0", tarball.as_uri())
+    def version(self, repo=None):
+        return ((repo or self.repo) / ".github/tools/figures/tikz-tensors/tex/tikz-tensors.sty").read_text()
+
+    def staged_gitlink(self):
+        return self.git(self.repo, "ls-files", "-s", "--", ".github/tools/figures/tikz-tensors").split()[:2]
+
+    def drop_broken_release(self):
+        self.git(self.origin, "tag", "-d", "v0.3.0")
+
+    def test_ensure_adds_it_at_the_newest_release(self):
+        self.drop_broken_release()
+        r = self.script("ensure")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("v0.2.0", r.stderr)
+        self.assertEqual(self.version(), sty("0.2.0"))
+        self.assertEqual(self.staged_gitlink()[0], "160000", "the pin is staged as a submodule")
+        self.assertIn("tikz-tensors", (self.repo / ".gitmodules").read_text())
+
+    def test_ensure_restores_what_use_this_template_drops(self):
+        """A template copy has .gitmodules and an empty directory, but no pinned commit."""
+        self.drop_broken_release()
+        (self.repo / ".gitmodules").write_text(
+            '[submodule ".github/tools/figures/tikz-tensors"]\n'
+            "\tpath = .github/tools/figures/tikz-tensors\n"
+            "\turl = https://github.com/pen-sotashimozono/tikz-tensors\n")
+        self.sub.mkdir()
+        r = self.script("ensure")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.version(), sty("0.2.0"))
+        self.assertEqual(self.staged_gitlink()[0], "160000")
+
+    def test_a_fresh_clone_is_initialised_at_the_recorded_pin(self):
+        self.assertEqual(self.script("pin", "v0.1.0").returncode, 0)
+        self.git(self.repo, "commit", "-qm", "pin v0.1.0")
+        clone = self.repo.parent / "clone"
+        self.git(self.repo.parent, "clone", "-q", str(self.repo), str(clone))
+        self.assertFalse((clone / ".github/tools/figures/tikz-tensors/tex").exists())
+        r = self.script("ensure", repo=clone)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.version(clone), sty("0.1.0"), "the recorded pin, not the newest")
+
+    def test_pin_moves_to_a_release_and_stages_it(self):
+        self.assertEqual(self.script("pin", "v0.2.0").returncode, 0)
+        before = self.staged_gitlink()[1]
+        r = self.script("pin", "v0.1.0")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.version(), sty("0.1.0"))
+        self.assertNotEqual(self.staged_gitlink()[1], before)
+
+    def test_pin_refuses_a_missing_tag(self):
+        self.assertEqual(self.script("pin", "v0.2.0").returncode, 0)
+        r = self.script("pin", "v9.9.9")
         self.assertNotEqual(r.returncode, 0)
-        self.assertIn("has no LICENSE", r.stderr)
-        self.assert_untouched()
+        self.assertIn("no tag v9.9.9", r.stderr)
+        self.assertEqual(self.version(), sty("0.2.0"))
+
+    def test_pin_refuses_a_tag_whose_version_line_disagrees(self):
+        r = self.script("pin", "v0.3.0")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("says v0.2.9", r.stderr)
+
+    def test_status_names_the_release_or_says_it_is_not_one(self):
+        self.assertEqual(self.script("pin", "v0.2.0").returncode, 0)
+        self.assertIn("= release v0.2.0", self.script("status").stdout)
+        (self.sub / "tex/tikz-tensors.sty").write_text(sty("0.2.0") + "% an edit in place\n")
+        self.git(self.sub, "commit", "-qam", "edit")
+        out = self.script("status").stdout
+        self.assertIn("not a release", out)
+        self.assertIn("differs from the commit this repository records", out)
 
 
 if __name__ == "__main__":

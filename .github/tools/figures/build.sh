@@ -13,9 +13,10 @@
 # figures/ holds only what a writer looks at: the pages (src/) and what they
 # build into (assets/). Everything that runs them sits here, next to this
 # script: preamble.tex (every .tex page does \input{preamble}), tikz-tensors/
-# (the vendored TikZ format and theme: \usepackage{tikz-tensors} for tensor
-# diagrams; update-tikz-tensors.sh pins its version),
-# and latexmkrc. They are found through TEXINPUTS (and PYTHONPATH, for any
+# (a git submodule, the TikZ format and theme: \usepackage{tikz-tensors} for
+# tensor diagrams; tikz-tensors.sh pins its version, and is called here to
+# fetch it when a checkout lacks it), and latexmkrc. They are found through
+# TEXINPUTS (and PYTHONPATH, for any
 # helper module a Python page wants to share), so a page never names this
 # directory. Python pages are for computed plots; pictures are TikZ.
 #
@@ -70,7 +71,7 @@ for arg in "${args[@]}"; do
 done
 
 # A page depends on itself and on the shared files it can read: a .tex page on
-# $TOOLS/*.tex and *.sty (preamble.tex, any local style) and the vendored tikz-tensors (a new release
+# $TOOLS/*.tex and *.sty (preamble.tex, any local style) and tikz-tensors/tex (a new pin
 # restyles every LaTeX page); a .py page on the modules pages import, named
 # here -- not on every *.py in $TOOLS, which also holds paper_figures.py, a
 # separate tool whose edits must not rerun slow pages. Add a shared module's
@@ -87,6 +88,12 @@ stale() {
   return 1
 }
 
+# tikz-tensors is a submodule: present it before the first LaTeX page, so a
+# fresh clone (or a repository made from the template) builds with no setup.
+for src in "${sources[@]}"; do
+  case "$src" in *.tex) "$TOOLS/tikz-tensors.sh" ensure; break ;; esac
+done
+
 for src in "${sources[@]}"; do
   rel="${src#src/}"
   topic="$(dirname "$rel")"
@@ -98,9 +105,11 @@ for src in "${sources[@]}"; do
     *.tex)
       mkdir -p "$BUILD/$topic"
       # The trailing ':' keeps TeX's default search path after the shared files.
+      # Only tikz-tensors/tex, not the whole submodule: its tests and examples
+      # hold .tex files a page must never pick up by name.
       # A fixed date makes the PDF (and its /ID) the same bytes on every build,
       # so a rebuilt page that did not change shows no diff.
-      if ! TEXINPUTS="$TOOLS//:${TEXINPUTS:-}" SOURCE_DATE_EPOCH=0 FORCE_SOURCE_DATE=1 \
+      if ! TEXINPUTS="$TOOLS:$TOOLS/tikz-tensors/tex:${TEXINPUTS:-}" SOURCE_DATE_EPOCH=0 FORCE_SOURCE_DATE=1 \
           latexmk -r "$TOOLS/latexmkrc" -outdir="$BUILD/$topic" "$src" >/dev/null 2>&1; then
         echo "error: $src failed:" >&2
         grep -A4 '^!\|:[0-9]*:' "$BUILD/$topic/$name.log" >&2 || true
