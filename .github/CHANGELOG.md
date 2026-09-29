@@ -23,6 +23,14 @@ those entries are left as written rather than rewritten to match.
 
 <!-- new entries go directly below this line -->
 
+## v0.0.13-notes — 2026-09-29
+
+The bibliography's comments now point at papers/, where cited works' PDFs live instead of refs/.
+
+## v0.0.13-main — 2026-09-29
+
+The bibliography's comments now point at papers/, where cited works' PDFs live instead of refs/.
+
 ## notes-v0.0.12 — 2026-08-31
 
 Add a references skill and refs_sync.sh, so references.bib drives refs/ from the doiget store.
