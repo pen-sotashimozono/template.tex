@@ -70,7 +70,7 @@ jobs:
           # empty. Pin it afresh at its newest release; this stages both.
           .github/tools/figures/tikz-tensors.sh ensure
 
-          # The weekly sync keeps the template itself on tikz-tensors' main; a
+          # The daily sync keeps the template itself on tikz-tensors' main; a
           # project moves when it chooses (tikz-tensors.sh pin), so it goes.
           rm -f .github/workflows/SyncTikzTensors.yml
 

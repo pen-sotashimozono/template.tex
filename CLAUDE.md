@@ -91,7 +91,7 @@ without `--recurse-submodules`), and `Initialize.yml` pins it at tikz-tensors'
 main in a repository made from this template, because "Use this template"
 copies `.gitmodules` but not the pinned commit. Once fetched, figures build
 offline. The template repository itself follows tikz-tensors'
-main weekly (`SyncTikzTensors.yml`: pin, rebuild the example figures, commit);
+main daily (`SyncTikzTensors.yml`: pin, rebuild the example figures, commit);
 initialization deletes that workflow, so a project moves only when it pins.
 Pictures are TikZ (a project's own parts go in a `.sty` next to build.sh);
 `.py` pages are for computed plots. build.sh finds the shared files

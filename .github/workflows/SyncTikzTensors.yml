@@ -1,6 +1,6 @@
 name: Sync tikz-tensors
 
-# The template itself follows tikz-tensors: once a week (or on demand) it moves
+# The template itself follows tikz-tensors: every day (or on demand) it moves
 # the submodule to tikz-tensors' main -- which is always its newest release --
 # rebuilds the example figures with it, checks the pin and the scripts, and
 # commits the result to main. Nothing happens when main has not moved.
@@ -10,7 +10,7 @@ name: Sync tikz-tensors
 
 on:
   schedule:
-    - cron: "17 3 * * 1"   # Mondays 03:17 UTC
+    - cron: "17 3 * * *"   # daily, 03:17 UTC
   workflow_dispatch:
 
 permissions:
@@ -84,5 +84,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .github/tools/figures/tikz-tensors figures/assets
-          git commit -m "chore: tikz-tensors $TAG (weekly sync with its main)"
+          git commit -m "chore: tikz-tensors $TAG (daily sync with its main)"
           git push origin HEAD:main
