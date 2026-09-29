@@ -14,7 +14,7 @@
 # build into (assets/). Everything that runs them sits here, next to this
 # script: preamble.tex (every .tex page does \input{preamble}), tikz-tensors/
 # (the vendored TikZ format and theme: \usepackage{tikz-tensors} for tensor
-# diagrams and schematic pictures; update-tikz-tensors.sh pins its version),
+# diagrams; update-tikz-tensors.sh pins its version),
 # and latexmkrc. They are found through TEXINPUTS (and PYTHONPATH, for any
 # helper module a Python page wants to share), so a page never names this
 # directory. Python pages are for computed plots; pictures are TikZ.
@@ -70,7 +70,7 @@ for arg in "${args[@]}"; do
 done
 
 # A page depends on itself and on the shared files it can read: a .tex page on
-# $TOOLS/*.tex (preamble.tex) and the vendored tikz-tensors (a new release
+# $TOOLS/*.tex and *.sty (preamble.tex, any local style) and the vendored tikz-tensors (a new release
 # restyles every LaTeX page); a .py page on the modules pages import, named
 # here -- not on every *.py in $TOOLS, which also holds paper_figures.py, a
 # separate tool whose edits must not rerun slow pages. Add a shared module's
@@ -80,7 +80,7 @@ stale() {
   local svg="$1" src="$2" ext="${2##*.}" dep deps
   [ "$force" -eq 1 ] || [ ! -f "$svg" ] || [ "$src" -nt "$svg" ] && return 0
   [ "$pdf" -eq 1 ] && [ "$ext" = tex ] && [ ! -f "${svg%.svg}.pdf" ] && return 0
-  if [ "$ext" = tex ]; then deps=("$TOOLS"/*.tex "$TOOLS"/tikz-tensors/tex/*); else deps=("${SHARED_PY[@]}"); fi
+  if [ "$ext" = tex ]; then deps=("$TOOLS"/*.tex "$TOOLS"/*.sty "$TOOLS"/tikz-tensors/tex/*); else deps=("${SHARED_PY[@]}"); fi
   for dep in "${deps[@]}"; do
     [ -f "$dep" ] && [ "$dep" -nt "$svg" ] && return 0
   done

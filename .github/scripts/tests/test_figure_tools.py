@@ -175,14 +175,12 @@ class UpdateTikzTensors(unittest.TestCase):
         self.vendored = tools / "tikz-tensors"
         (self.vendored / "tex").mkdir(parents=True)
         (self.vendored / "tex/tikz-tensors.sty").write_text("% old sty\n")
-        (self.vendored / "VERSION").write_text("v0.1.0\n")
 
     def run_script(self, tag, url):
         return subprocess.run(["sh", str(self.script), tag], cwd=self.root, capture_output=True, text=True,
                               env=dict(os.environ, TIKZ_TENSORS_URL=url))
 
     def assert_untouched(self):
-        self.assertEqual((self.vendored / "VERSION").read_text(), "v0.1.0\n")
         self.assertEqual((self.vendored / "tex/tikz-tensors.sty").read_text(), "% old sty\n")
         self.assertEqual(sorted(p.name for p in self.vendored.parent.iterdir()),
                          ["tikz-tensors", "update-tikz-tensors.sh"], "no half-built copy left behind")
@@ -192,9 +190,9 @@ class UpdateTikzTensors(unittest.TestCase):
         release_tarball(tarball, "v0.2.0", FULL)
         r = self.run_script("v0.2.0", tarball.as_uri())
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.vendored / "VERSION").read_text(), "v0.2.0\n")
         self.assertEqual((self.vendored / "tex/tikz-tensors.sty").read_text(), "% new sty\n")
         self.assertTrue((self.vendored / "LICENSE").is_file())
+        self.assertEqual(sorted(p.name for p in self.vendored.iterdir()), ["LICENSE", "tex", "theme"])
 
     def test_a_failed_download_says_so_and_changes_nothing(self):
         r = self.run_script("v9.9.9", (self.root / "no-such.tar.gz").as_uri())

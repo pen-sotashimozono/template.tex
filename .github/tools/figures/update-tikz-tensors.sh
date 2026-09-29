@@ -7,7 +7,8 @@
 # The copy is committed, so a figure builds offline and the same everywhere
 # until this script is run for a newer tag. build.sh puts tikz-tensors/tex on
 # TEXINPUTS; pages write \usepackage{tikz-tensors}. theme.css is kept too, for
-# the HTML notes and storyboards. TIKZ_TENSORS_URL overrides the download URL
+# the HTML notes and storyboards. The vendored version is the \ProvidesPackage
+# line of tikz-tensors.sty. TIKZ_TENSORS_URL overrides the download URL
 # (the tests point it at a local file:// tarball).
 set -eu
 TAG="${1:?usage: $0 <tag, e.g. v0.1.0>}"
@@ -30,7 +31,7 @@ if ! tar xzf "$TMP/release.tar.gz" -C "$TMP/src" --strip-components=1; then
 fi
 
 # Assemble the whole new copy beside the old one, check every file is there,
-# then swap it in: a failure never leaves tex/ from one tag and VERSION from another.
+# then swap it in: a failure never leaves the copy half one tag, half another.
 mkdir -p "$NEW/tex" "$NEW/theme"
 for f in tex/tikz-tensors.sty tex/tikz-tensors-colors.tex theme/theme.css theme/tokens.toml LICENSE; do
   if [ ! -f "$TMP/src/$f" ]; then
@@ -39,7 +40,6 @@ for f in tex/tikz-tensors.sty tex/tikz-tensors-colors.tex theme/theme.css theme/
   fi
   cp "$TMP/src/$f" "$NEW/$f"
 done
-echo "$TAG" > "$NEW/VERSION"
 rm -rf "$DIR.old"
 if [ -d "$DIR" ]; then mv "$DIR" "$DIR.old"; fi
 mv "$NEW" "$DIR"

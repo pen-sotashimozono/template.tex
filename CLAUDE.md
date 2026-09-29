@@ -61,13 +61,14 @@ tensor diagram) or `<page>.py` (a script that writes the SVG path it is given)
 
 `figures/` holds only pages and what they build into; everything that runs
 them sits in `.github/tools/figures/`. A `.tex` page starts `\input{preamble}`
-and a tensor diagram or schematic picture adds `\usepackage{tikz-tensors}`
+and a tensor diagram adds `\usepackage{tikz-tensors}`
 ([pen-sotashimozono/tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors): wavy legs for continuous arguments, plain lines for finite indices,
-circles for functions, squares for coefficient arrays; `\tnswap`, `\tnnucleus`,
-`\tnelectron`, `\tncloud`, `\tncoulomb`; the shared theme's colours). It is
-vendored at a pinned tag in `.github/tools/figures/tikz-tensors/`
-(`update-tikz-tensors.sh <tag>` moves it), so figures build offline. `.py`
-pages are for computed plots; pictures are TikZ. build.sh finds the shared files
+circles for functions, squares for coefficient arrays; `\tnswap`; the shared
+theme's colours). It is vendored at a pinned tag in
+`.github/tools/figures/tikz-tensors/` (`update-tikz-tensors.sh <tag>` moves it;
+the version is its `.sty`'s `\ProvidesPackage` line), so figures build offline.
+Pictures are TikZ (a project's own parts go in a `.sty` next to build.sh);
+`.py` pages are for computed plots. build.sh finds the shared files
 through TEXINPUTS and passes
 its own `latexmkrc` with `-r`, so a page never names that directory, and the
 root `.latexmkrc` never applies to pages. A document includes a page as

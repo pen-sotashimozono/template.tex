@@ -1,5 +1,5 @@
-%% tikz-tensors.sty -- one TikZ format for tensor-network diagrams and the
-%% schematic pictures that go with them, in the shared theme (theme/tokens.toml).
+%% tikz-tensors.sty -- one TikZ format for tensor-network diagrams, in the shared
+%% theme (theme/tokens.toml).
 %%
 %%   \usepackage{tikz-tensors}
 %%
@@ -17,15 +17,15 @@
 %% the numbers sit on the basis functions, which sit on space.
 %%
 %% Exchanging two fermion legs is \tnswap (a sign in the text, not in the drawing).
-%% Schematic parts: \tnnucleus, \tnelectron, \tncloud, \tncoulomb; colours ele,
-%% nuc, exchange, exact and the page tokens tt<name> come from
-%% tikz-tensors-colors.tex, generated from the theme.
+%% Colours (ele for continuous legs and functions, the page tokens tt<name>, and
+%% the theme's other named colours) come from tikz-tensors-colors.tex, generated
+%% from theme/tokens.toml. The version is the \ProvidesPackage line below.
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{tikz-tensors}[2026/09/29 v0.1.0 tensor-network diagrams and schematics in one theme]
+\ProvidesPackage{tikz-tensors}[2026/09/29 v0.2.0 tensor-network diagrams in one theme]
 
 \RequirePackage{xcolor}
 \RequirePackage{tikz}
-\usetikzlibrary{decorations.pathmorphing,calc,fadings}
+\usetikzlibrary{decorations.pathmorphing,calc}
 \input{tikz-tensors-colors.tex}
 
 % ---- tensor diagrams ---------------------------------------------------------
@@ -69,20 +69,4 @@
 }
 \makeatother
 
-% ---- schematic parts -----------------------------------------------------------
-% A nucleus (orange disc with +), an electron (blue dot; [i] marks the one followed),
-% an electron cloud with fuzzy edges, and a dashed Coulomb line.
-\tikzfading[name=tn fuzzy, inner color=transparent!0, outer color=transparent!100]
-\newcommand{\tnnucleus}[1]{%
-  \fill[nuc] #1 circle (0.3);
-  \node[text=white, font=\bfseries] at #1 {$+$};}
-\NewDocumentCommand{\tnelectron}{o m}{%
-  \IfNoValueTF{#1}
-    {\fill[ele] #2 circle (0.1);}
-    {\fill[ele, draw=ttfg, line width=0.6pt] #2 circle (0.14);
-     \node[above=1pt, font=\small] at #2 {$#1$};}}
-% \tncloud{<centre>}{<x radius>}{<y radius>}[<opacity>]
-\NewDocumentCommand{\tncloud}{m m m O{0.45}}{%
-  \fill[ele, fill opacity=#4, path fading=tn fuzzy] #1 ellipse ({#2} and {#3});}
-\newcommand{\tncoulomb}[2]{\draw[black!50, dashed, line width=0.6pt] #1 -- #2;}
 \endinput

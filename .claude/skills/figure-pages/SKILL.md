@@ -1,6 +1,6 @@
 ---
 name: figure-pages
-description: Make or change a figure page - a standalone equation, a TikZ tensor diagram or schematic picture (tikz-tensors), or a computed plot - under figures/src/, built to figures/assets/ as SVG (and PDF for the documents). Use whenever a slide or a document needs a new formula or schematic picture, or a figure's notation, numbering or folder changes.
+description: Make or change a figure page - a standalone equation, a TikZ tensor diagram (tikz-tensors) or picture, or a computed plot - under figures/src/, built to figures/assets/ as SVG (and PDF for the documents). Use whenever a slide or a document needs a new formula or schematic picture, or a figure's notation, numbering or folder changes.
 ---
 
 # Figure pages: one output per source
@@ -45,9 +45,9 @@ one page of each kind; delete it once a real topic exists.
   contracts to one array, `\tnswap` to exchange two fermion legs. Conventions
   are in the header of `tikz-tensors.sty` and its README. Put the coefficients on top of the basis
   functions, so the basis visibly sits between the numbers and space.
-- **Schematic picture** (`.tex`): `\usepackage{tikz-tensors}` and its parts
-  `\tnnucleus`, `\tnelectron[<label>]`, `\tncloud`, `\tncoulomb`; labels are LaTeX
-  math, so they match the equations.
+- **Picture** (`.tex`): plain TikZ with the theme's colours (from tikz-tensors);
+  parts a project reuses go in a `.sty` next to build.sh (found on TEXINPUTS).
+  Labels are LaTeX math, so they match the equations.
 - **Computed plot** (`.py`): a script that writes the SVG path it is given
   (matplotlib with `svg.fonttype = path`, say); run it with `PYTHON=` an
   interpreter that has what it imports.
