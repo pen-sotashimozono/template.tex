@@ -48,16 +48,21 @@ else
   echo "::warning::$DOC: out/$STEM.bbl is missing, so the bundle has no bibliography. Build $ROOT_TEX first." >&2
 fi
 
+# Figures keep their path below figures/, so \includegraphics{assets/<topic>/<page>}
+# still resolves once \graphicspath{{figures/}} points nowhere in the bundle
+# (LaTeX falls back to the current directory). figures/.build/ holds the figure
+# build's intermediates and figures/papers/ other papers' figures, not ours.
 if [ -d figures ]; then
-  find figures -name '*.pdf' | while IFS= read -r f; do cp "$f" "$DEST/"; done
+  (cd figures && find . \( -path ./.build -o -path ./papers \) -prune -o -name '*.pdf' -print) \
+    | while IFS= read -r f; do mkdir -p "$DEST/$(dirname "$f")"; cp "figures/$f" "$DEST/$f"; done
 fi
 
 echo "$DOC: bundle contents"
-ls -1 "$DEST" | sed 's/^/  /'
+(cd "$DEST" && find . -type f | sed 's|^\./|  |' | sort)
 
 # Compile a copy, from nothing but what the tarball carries.
 VERIFY="$(mktemp -d)"
-cp "$DEST"/* "$VERIFY"/
+cp -R "$DEST"/. "$VERIFY"/
 if (cd "$VERIFY" && latexmk -lualatex -interaction=nonstopmode "$STEM.tex" > verify.log 2>&1); then
   echo "$DOC: bundle compiles standalone."
 else

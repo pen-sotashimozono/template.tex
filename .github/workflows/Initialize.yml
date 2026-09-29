@@ -20,7 +20,7 @@ jobs:
     # Skip in the template repo; run only in repos created from it.
     # Two guards: is_template flag, and an explicit slug exclusion as a backstop.
     if: ${{ github.event.repository.is_template == false && github.repository != 'pen-sotashimozono/template.tex' }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","rosina"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
 

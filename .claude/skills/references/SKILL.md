@@ -1,6 +1,6 @@
 ---
 name: references
-description: Add, fetch and read citations with doiget. Use whenever a reference is added to references.bib, a cited PDF is needed in refs/, or a claim has to be checked against the source. Entries are never hand-written - a guessed identifier usually resolves to a different real paper.
+description: Add, fetch and read citations with doiget. Use whenever a reference is added to references.bib, a cited PDF is needed in papers/, or a claim has to be checked against the source. Entries are never hand-written - a guessed identifier usually resolves to a different real paper.
 ---
 
 # Citations run through doiget
@@ -11,7 +11,7 @@ Three places, one direction:
 |---|---|---|
 | `references.bib` | which works are cited — the source of truth | `doiget cite` |
 | doiget store | the machine-wide PDF cache | `doiget fetch` |
-| `refs/`, `refs/src/` | this project's copy: PDF, and full text for grepping | `refs_sync.sh`, `fetch_sources.sh` |
+| `papers/`, `papers/src/` | this project's copy: PDF, and full text for grepping | `refs_sync.sh`, `fetch_sources.sh` |
 
 ## Adding a citation
 
@@ -28,8 +28,8 @@ usually resolves to a *different, real* paper — worse than a broken link.
 always cites. Then:
 
 ```sh
-./.github/scripts/refs_sync.sh       # every entry gets refs/<bibkey>.pdf
-./.github/scripts/fetch_sources.sh   # and refs/src/<bibkey>.tex or .txt
+./.github/scripts/refs_sync.sh       # every entry gets papers/<bibkey>.pdf
+./.github/scripts/fetch_sources.sh   # and papers/src/<bibkey>.tex or .txt
 ```
 
 Both are idempotent and read `references.bib`, so neither needs a ref passed by
@@ -52,12 +52,12 @@ doiget config show          # confirm store_root_source is DOIGET_STORE_ROOT
 
 ## Reading a paper
 
-Prefer `refs/src/` to opening the PDF:
+Prefer `papers/src/` to opening the PDF:
 
 ```sh
-grep -n 'F_Q' refs/src/hauke2016measuring.tex   # the inequality in source form
-grep -l 'structure factor' refs/src/*.tex        # which references discuss it
-grep -o '\\cite{[^}]*}' refs/src/<key>.tex       # what that paper cites
+grep -n 'F_Q' papers/src/hauke2016measuring.tex   # the inequality in source form
+grep -l 'structure factor' papers/src/*.tex        # which references discuss it
+grep -o '\\cite{[^}]*}' papers/src/<key>.tex       # what that paper cites
 ```
 
 arXiv LaTeX source beats PDF extraction: equations keep their structure,
@@ -66,7 +66,7 @@ arXiv LaTeX source beats PDF extraction: equations keep their structure,
 Greek letters. `fetch_sources.sh` prefers `.tex` and falls back to `.txt` from
 the PDF.
 
-Other reads, when `refs/src/` is not enough:
+Other reads, when `papers/src/` is not enough:
 
 ```sh
 doiget text 1509.01739         # sectioned plain text via ar5iv (arXiv id)
@@ -90,6 +90,6 @@ Two failures matter more than a broken link:
 
 ## Keys
 
-`refs/<bibkey>.pdf` and `refs/src/<bibkey>.*` are keyed by the bibkey, so
+`papers/<bibkey>.pdf` and `papers/src/<bibkey>.*` are keyed by the bibkey, so
 renaming a key means renaming its files. `refs_sync.sh` re-fetches under the new
 name; delete the old ones.

@@ -1,0 +1,22 @@
+% example, page 02: a tensor diagram with the styles of tikz-tensors -- the expansion
+% psi(r1, r2) = sum_ij C_ij phi_i(r1) phi_j(r2): the coefficient array C (square, plain
+% legs i, j) on the basis functions phi (circles), which carry the positions (wavy legs).
+\documentclass[border=4pt]{standalone}
+\input{preamble}
+\usepackage{tikz-tensors}
+
+\begin{document}
+\begin{tikzpicture}
+  \node[fnwide] (psi) at (0,0) {$\psi$};
+  \draw[cont] ([xshift=-4.5mm]psi.south) -- ++(0,-0.9) node[leg, below] {$\mathbf r_1$};
+  \draw[cont] ([xshift= 4.5mm]psi.south) -- ++(0,-0.9) node[leg, below] {$\mathbf r_2$};
+  \node at (1.3,-0.2) {$=$};
+  \node[coefwide, minimum width=22mm] (C) at (3.0,1.3) {$C$};
+  \node[fn] (p1) at (2.25,0) {$\varphi$};
+  \node[fn] (p2) at (3.75,0) {$\varphi$};
+  \draw[disc] (C.south -| p1) -- node[leg, left] {$i$} (p1);
+  \draw[disc] (C.south -| p2) -- node[leg, right] {$j$} (p2);
+  \draw[cont] (p1.south) -- ++(0,-0.9) node[leg, below] {$\mathbf r_1$};
+  \draw[cont] (p2.south) -- ++(0,-0.9) node[leg, below] {$\mathbf r_2$};
+\end{tikzpicture}
+\end{document}

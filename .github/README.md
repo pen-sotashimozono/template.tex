@@ -48,15 +48,18 @@ notes.tex                   # working notebook, article
 supplemental.tex            # supplementary material (optional)
 references.bib              # bibliography, from `doiget cite`
 docs.toml                   # root documents and versions — the version authority
-figures/  notes/            # figures (PDF only); children of notes.tex
-refs/  refs/src/            # one PDF per bibkey; full text for grepping
+figures/                    # the documents' figures (PDF); src/ figure pages -> assets/ (SVG, PDF);
+                            #   papers/ cited papers' own figures
+notes/                      # children of notes.tex
+papers/  papers/src/            # one PDF per bibkey; full text for grepping
 .latexmkrc                  # LuaLaTeX + BibTeX into out/
 CLAUDE.md  LICENSE          # root-only, see below
 
 .github/CHANGELOG.md        # one entry per version
-.github/scripts/            # bump.sh, docs.py, closure.py, diff.sh, arxiv_bundle.sh, refs_sync.sh, fetch_sources.sh
+.github/scripts/            # bump.sh, docs.py, closure.py, diff.sh, arxiv_bundle.sh, refs_sync.sh, fetch_sources.sh, bib_files.py
+.github/tools/figures/      # figure build (build.sh, latexmkrc, preamble), tikz-tensors/ (vendored), paper_figures.py
 .github/workflows/          # build, version checks, release, reference verification
-.claude/skills/             # changelog (record a change), references (doiget)
+.claude/skills/             # changelog, references (doiget), figure-pages, paper-figures
 
 out/                        # build output (gitignored)
 ```

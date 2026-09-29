@@ -80,8 +80,12 @@ def build(doc_id: str, table: dict, outdir: pathlib.Path) -> pathlib.Path:
 
 
 def uno_python() -> str | None:
-    """An interpreter that can import LibreOffice's uno module, if any."""
-    for python in dict.fromkeys([sys.executable, "/usr/bin/python3"]):
+    """An interpreter that can import LibreOffice's uno module, if any: this one,
+    the system's (python3-uno), or the Python bundled with LibreOffice beside
+    soffice (a LibreOffice unpacked from the official tarball, as on rosina)."""
+    soffice = shutil.which("soffice") or shutil.which("libreoffice")
+    bundled = str(pathlib.Path(soffice).resolve().parent / "python") if soffice else None
+    for python in dict.fromkeys(p for p in (sys.executable, "/usr/bin/python3", bundled) if p):
         if pathlib.Path(python).exists() and subprocess.run(
                 [python, "-c", "import uno"], capture_output=True).returncode == 0:
             return python

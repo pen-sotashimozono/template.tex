@@ -1,0 +1,7 @@
+# latexmk settings for the standalone figure pages under figures/src/. build.sh
+# passes this file with -r and runs from figures/, so it never applies to the
+# documents at the root (which use the root .latexmkrc). TEXINPUTS, which finds
+# preamble.tex and the vendored tikz-tensors in this directory, is set by build.sh.
+$pdf_mode = 4;    # LuaLaTeX, as for the documents
+$lualatex = 'lualatex -interaction=nonstopmode -halt-on-error -file-line-error %O %S';
+$bibtex_use = 0;  # a page has no bibliography

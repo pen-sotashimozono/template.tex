@@ -1,7 +1,7 @@
 # Working rules for this repository
 
 Two root documents: `main.tex` (paper, revtex4-2 two-column PRB) and
-`notes.tex` (working notebook, article). They share `references.bib`; `refs/`
+`notes.tex` (working notebook, article). They share `references.bib`; `papers/`
 holds the PDF of every cited work.
 
 `docs.toml` is the only version authority. The table name is the
@@ -29,12 +29,14 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `main.tex`, `notes.tex` | the documents; children pulled in with `\input` |
 | `references.bib` | bibliography — from `doiget cite`, never hand-written |
 | `docs.toml` | root documents and versions — the version authority |
-| `refs/`, `refs/src/` | one PDF per bibkey; full text for grepping |
-| `figures/`, `notes/` | figures (PDF only); children of `notes.tex` |
+| `papers/`, `papers/src/` | one PDF per bibkey; full text for grepping |
+| `figures/` | the documents' own figures (PDF) at the top; figure pages in `src/<topic>/`, built into `assets/<topic>/` (SVG, and PDF with `--pdf`); cited papers' own figures as `papers/<bibkey>-fig<N>.svg` — see below |
+| `notes/` | children of `notes.tex` |
 | `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
-| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `exports.py`, `soffice_pdf.py` |
-| `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget) |
+| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py` |
+| `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `paper_figures.py`, and `tikz-tensors/` (the vendored TikZ format and theme, pinned by `update-tikz-tensors.sh`) |
+| `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure) |
 | `out/` | build output (gitignored) |
 
 `latexmk main.tex` → `out/main.pdf`, `latexmk notes.tex` → `out/notes.pdf`. One
@@ -44,6 +46,42 @@ Before editing either preamble: **revtex4-2 bundles its own `natbib`**, so only
 `notes.tex` loads it. `\affiliation`, `\email` and `acknowledgments` are
 revtex-only, so `notes.tex` reimplements them — that is what lets the same
 markup compile under either class.
+
+## Figures: pages in `figures/src/`, tools in `.github/tools/figures/`
+
+A figure you make is a **page**, one output per source:
+`figures/src/<topic>/<page>.tex` (standalone LaTeX: an equation, or a TikZ
+tensor diagram) or `<page>.py` (a script that writes the SVG path it is given)
+→ `figures/assets/<topic>/<page>.svg`, and `.pdf` for LaTeX pages with `--pdf`.
+
+```sh
+.github/tools/figures/build.sh               # every page that is out of date
+.github/tools/figures/build.sh --pdf 02-x    # one topic, keeping PDFs for \includegraphics
+```
+
+`figures/` holds only pages and what they build into; everything that runs
+them sits in `.github/tools/figures/`. A `.tex` page starts `\input{preamble}`
+and a tensor diagram adds `\usepackage{tikz-tensors}`
+([pen-sotashimozono/tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors): wavy legs for continuous arguments, plain lines for finite indices,
+circles for functions, squares for coefficient arrays; `\tnswap`; the shared
+theme's colours). It is vendored at a pinned tag in
+`.github/tools/figures/tikz-tensors/` (`update-tikz-tensors.sh <tag>` moves it;
+the version is its `.sty`'s `\ProvidesPackage` line), so figures build offline.
+Pictures are TikZ (a project's own parts go in a `.sty` next to build.sh);
+`.py` pages are for computed plots. build.sh finds the shared files
+through TEXINPUTS and passes
+its own `latexmkrc` with `-r`, so a page never names that directory, and the
+root `.latexmkrc` never applies to pages. A document includes a page as
+`\includegraphics{assets/<topic>/<page>}` (graphicspath `figures/`); the arXiv
+bundle keeps paths below `figures/`, so that still resolves there.
+`assets/` mirrors `src/`: an output whose source is gone is deleted.
+The **`figure-pages`** skill carries the rules (formula only, one line per
+page, numbers from a source, look before reporting).
+
+A figure showing **another paper's result** is never redrawn: the
+**`paper-figures`** skill extracts the original from its arXiv source, or crops
+it from `papers/<bibkey>.pdf`, into `figures/papers/<bibkey>-fig<N>.svg`, with
+the caption in the SVG's `<desc>`. Cite the paper wherever it is shown.
 
 ## Versions — bump what the PR touched, and only that
 
@@ -98,20 +136,20 @@ Crossref and arXiv when that file changes.
 
 ```sh
 doiget cite <doi|arxiv-id>           # BibTeX; paste in verbatim, rename the key
-./.github/scripts/refs_sync.sh       # every entry gets refs/<bibkey>.pdf
-./.github/scripts/fetch_sources.sh   # and refs/src/<bibkey>.tex or .txt
+./.github/scripts/refs_sync.sh       # every entry gets papers/<bibkey>.pdf
+./.github/scripts/fetch_sources.sh   # and papers/src/<bibkey>.tex or .txt
 ```
 
 The **`references` skill** carries this, including pinning `DOIGET_STORE_ROOT`
 — the store defaults to `./papers` under the cwd, so doiget run from a paper
 repository builds a second store inside it.
 
-`refs/src/` makes checking a citation cheap — prefer it to opening the PDF:
+`papers/src/` makes checking a citation cheap — prefer it to opening the PDF:
 
 ```sh
-grep -n 'F_Q' refs/src/hauke2016measuring.tex     # the inequality in source form
-grep -l 'structure factor' refs/src/*.tex          # which references discuss it
-grep -o '\\cite{[^}]*}' refs/src/<key>.tex         # what that paper cites
+grep -n 'F_Q' papers/src/hauke2016measuring.tex     # the inequality in source form
+grep -l 'structure factor' papers/src/*.tex          # which references discuss it
+grep -o '\\cite{[^}]*}' papers/src/<key>.tex         # what that paper cites
 ```
 
 arXiv LaTeX source beats PDF extraction: equations keep their structure,
@@ -123,7 +161,11 @@ Greek letters.
   *different, real* paper, which is worse than a broken link.
 - **A resolving DOI is not proof the citation is right.** Check the title and
   authors, then read the PDF to confirm it supports your claim.
-- Keep `refs/<bibkey>.pdf` in sync with the key in `references.bib`.
+- Keep `papers/<bibkey>.pdf` in sync with the key in `references.bib`. Each entry
+  with a local PDF carries `file = {papers/<bibkey>.pdf}`, written by
+  `.github/scripts/bib_files.py` (run by `refs_sync.sh`, checked in CI) — never
+  by hand. A PDF fetched by hand (a licensed download) goes to
+  `papers/<bibkey>.pdf`; then run `refs_sync.sh` and `fetch_sources.sh`.
 - Some works have no OA PDF; `doiget fetch` stores metadata only. Cite normally
   and note the absence.
 
@@ -172,6 +214,6 @@ before rehearsal, as given or submitted) rather than on every save.
 
 1. `latexmk main.tex` and `latexmk notes.tex` both build clean.
 2. `bump.sh --affected patch` committed — or nothing, if no document changed.
-3. New citations came from `doiget`, with their PDFs in `refs/`.
+3. New citations came from `doiget`, with their PDFs in `papers/`.
 4. `git diff --cached HEAD --stat` — read the **whole** list and confirm nothing
    unintended was swept in by `git add -A`.

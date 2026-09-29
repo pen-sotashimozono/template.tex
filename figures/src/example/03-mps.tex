@@ -1,0 +1,19 @@
+% example, page 03: a matrix product state -- arrays A on a chain, bonds between
+% them (plain lines, the bond dimension D), occupation indices n_i down. A finite
+% basis throughout, so no wavy legs.
+\documentclass[border=4pt]{standalone}
+\input{preamble}
+\usepackage{tikz-tensors}
+
+\begin{document}
+\begin{tikzpicture}
+  \foreach \i/\l in {1/1,2/2,3/3,5/N} {
+    \node[coef] (A\i) at (1.4*\i,0) {$A$};
+    \draw[disc] (A\i) -- ++(0,-0.9) node[leg, below] {$n_{\l}$};
+  }
+  \draw[disc] (A1) -- (A2); \draw[disc] (A2) -- (A3);
+  \draw[disc] (A3) -- ++(0.55,0); \draw[disc] (A5) -- ++(-0.55,0);
+  \node at (5.6,0) {$\cdots$};
+  \node[leg, above] at (2.1,0) {$D$};
+\end{tikzpicture}
+\end{document}

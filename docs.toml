@@ -28,10 +28,10 @@
 # shipped on its own.
 
 [main]
-version = "0.0.12"
+version = "0.0.13"
 
 [notes]
-version = "0.0.12"
+version = "0.0.13"
 
 # `source` (pptx / docx) instead of a root: built to PDF by LibreOffice in CI.
 # See exports.py.

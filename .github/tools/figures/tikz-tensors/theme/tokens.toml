@@ -1,0 +1,43 @@
+# One set of design tokens for figures (TikZ), web pages (notes, storyboards)
+# and, later, slides. scripts/theme.py writes theme/theme.css and
+# tex/tikz-tensors-colors.tex from this file; edit here, never there.
+#
+# Base: the GitHub-style palette of the slide storyboards (light and dark).
+# The physics colours carry meaning and are the same in every medium:
+# a blue electron is an electron on a slide, in a note and in a diagram.
+
+[light]
+bg      = "#fafafa"   # page background
+card    = "#ffffff"   # cards, figure paper
+soft    = "#f6f8fa"   # table heads, subtle fills
+fg      = "#24292f"   # text
+muted   = "#57606a"   # secondary text
+faint   = "#8b949e"   # tertiary text, captions
+line    = "#e2e5e9"   # rules, hairlines
+accent  = "#0366d6"   # links, emphasis
+warn    = "#9a6700"
+warn-bg = "#fff8c5"
+bad     = "#a40e26"
+bad-bg  = "#ffebe9"
+
+[dark]
+bg      = "#0d1117"
+card    = "#161b22"
+soft    = "#1c2128"
+fg      = "#e6edf3"
+muted   = "#9198a1"
+faint   = "#6e7681"
+line    = "#30363d"
+accent  = "#4493f8"
+warn    = "#d29922"
+warn-bg = "#272115"
+bad     = "#f85149"
+bad-bg  = "#25171c"
+
+# Meaning, not decoration. Same in light and dark (figures keep their own white paper).
+[physics]
+ele      = "#2e6fba"   # electrons, electron density, continuous (position) legs
+nuc      = "#c96a1b"   # nuclei
+coef     = "#57606a"   # coefficient arrays (tensor boxes), finite-index legs
+exchange = "#a40e26"   # exchange: the term, the hole, the sign under a swap
+exact    = "#24292f"   # exact / reference results

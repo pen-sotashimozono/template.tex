@@ -29,7 +29,7 @@ concurrency:
 jobs:
   release:
     name: GitHub Release
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","rosina"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
         with:

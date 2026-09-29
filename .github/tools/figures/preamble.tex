@@ -1,0 +1,13 @@
+% Shared by every page under figures/src/: each page is
+%   \documentclass[border=4pt]{standalone}
+%   \input{preamble}
+% and build.sh (next to this file) puts this directory on TEXINPUTS so the
+% \input resolves.
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{braket}
+\usepackage{booktabs}
+\usepackage{xcolor}
+% The shared theme's colours (ele, nuc, exchange, ..., and the page tokens tt<name>),
+% from the vendored tikz-tensors -- the same values the HTML uses (theme.css).
+\input{tikz-tensors-colors}

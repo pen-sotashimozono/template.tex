@@ -4,9 +4,6 @@
 # Python bytecode from scripts/
 __pycache__/
 
-# doiget's store, if DOIGET_STORE_ROOT is unset and it lands here
-/papers/
-
 # arXiv submission bundles, produced by scripts/arxiv_bundle.sh
 /arxiv-src/
 /arxiv-check/
@@ -44,6 +41,12 @@ _minted*/
 # figures/ は PDF で管理するため除外しない
 !figures/
 !figures/**
+
+# ただし .github/tools/figures/build.sh の中間生成物は除外する。上の打ち消しより後に置くこと
+# (build.sh は終了時に消すが、途中で止めると残る)
+/figures/.build/
+# Python のバイトコードも同様 (上の __pycache__/ は !figures/** に打ち消される)
+/figures/**/__pycache__/
 
 # PowerPoint / Office lock files
 ~$*
