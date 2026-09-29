@@ -1,0 +1,88 @@
+name: Sync tikz-tensors
+
+# The template itself follows tikz-tensors: once a week (or on demand) it moves
+# the submodule to tikz-tensors' main -- which is always its newest release --
+# rebuilds the example figures with it, checks the pin and the scripts, and
+# commits the result to main. Nothing happens when main has not moved.
+#
+# Only the template runs this. A repository made from it chooses when to move
+# (tikz-tensors.sh pin), so Initialize.yml deletes this file with itself.
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"   # Mondays 03:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-tikz-tensors
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'pen-sotashimozono/template.tex'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Move the pin to tikz-tensors' main
+        id: pin
+        run: |
+          before="$(git ls-files -s .github/tools/figures/tikz-tensors | awk '{print $2}')"
+          .github/tools/figures/tikz-tensors.sh pin latest | tee pin.log
+          after="$(git ls-files -s .github/tools/figures/tikz-tensors | awk '{print $2}')"
+          tag="$(sed -n 's/.*pinned at \(v[0-9.]*\).*/\1/p' pin.log)"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if [ "$before" = "$after" ]; then
+            echo "Already at tikz-tensors main ($tag); nothing to do."
+            echo "moved=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "moved=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: TeX-Live/setup-texlive-action@v4
+        if: steps.pin.outputs.moved == 'true'
+        with:
+          packages: |
+            scheme-basic
+            collection-luatex
+            collection-latexrecommended
+            collection-fontsrecommended
+            collection-pictures
+            latexmk
+            standalone
+            xkeyval
+            currfile
+            filehook
+            gincltex
+            svn-prov
+            adjustbox
+            collectbox
+            braket
+
+      - name: Rebuild the example figures
+        if: steps.pin.outputs.moved == 'true'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq poppler-utils
+          .github/tools/figures/build.sh --force --pdf
+
+      - name: Check the pin and the scripts
+        if: steps.pin.outputs.moved == 'true'
+        run: |
+          .github/tools/figures/tikz-tensors.sh check
+          python3 -m unittest discover -s .github/scripts/tests
+
+      - name: Commit to main
+        if: steps.pin.outputs.moved == 'true'
+        env:
+          TAG: ${{ steps.pin.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/tools/figures/tikz-tensors figures/assets
+          git commit -m "chore: tikz-tensors $TAG (weekly sync with its main)"
+          git push origin HEAD:main
