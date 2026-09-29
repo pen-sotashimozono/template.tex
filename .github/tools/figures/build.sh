@@ -20,7 +20,7 @@
 # directory. Python pages are for computed plots; pictures are TikZ.
 #
 # A page is rebuilt when its SVG is missing or older than the page or a shared
-# file of its own kind (*.tex here for LaTeX, *.py here for Python), which keeps
+# file it reads (see stale() below), which keeps
 # slow pages (a PySCF curve) from running every time. Python pages run under
 # $PYTHON (default python3).
 #
@@ -69,15 +69,18 @@ for arg in "${args[@]}"; do
   fi
 done
 
-# A page depends on itself and on the shared files of its own kind here: a
-# .tex page on $TOOLS/*.tex and the vendored tikz-tensors (a new release
-# restyles every LaTeX page), a .py page on $TOOLS/*.py.
+# A page depends on itself and on the shared files it can read: a .tex page on
+# $TOOLS/*.tex (preamble.tex) and the vendored tikz-tensors (a new release
+# restyles every LaTeX page); a .py page on the modules pages import, named
+# here -- not on every *.py in $TOOLS, which also holds paper_figures.py, a
+# separate tool whose edits must not rerun slow pages. Add a shared module's
+# path to SHARED_PY when Python pages start importing one.
+SHARED_PY=("$TOOLS"/schematic.py)
 stale() {
-  local svg="$1" src="$2" dep
+  local svg="$1" src="$2" ext="${2##*.}" dep deps
   [ "$force" -eq 1 ] || [ ! -f "$svg" ] || [ "$src" -nt "$svg" ] && return 0
-  [ "$pdf" -eq 1 ] && [ "${src##*.}" = tex ] && [ ! -f "${svg%.svg}.pdf" ] && return 0
-  local deps=("$TOOLS"/*."${src##*.}")
-  [ "${src##*.}" = tex ] && deps+=("$TOOLS"/tikz-tensors/tex/*)
+  [ "$pdf" -eq 1 ] && [ "$ext" = tex ] && [ ! -f "${svg%.svg}.pdf" ] && return 0
+  if [ "$ext" = tex ]; then deps=("$TOOLS"/*.tex "$TOOLS"/tikz-tensors/tex/*); else deps=("${SHARED_PY[@]}"); fi
   for dep in "${deps[@]}"; do
     [ -f "$dep" ] && [ "$dep" -nt "$svg" ] && return 0
   done

@@ -1,18 +1,21 @@
 name: Script Tests
 
-# docs.py / exports.py against throwaway repositories, and a real LibreOffice
-# build of the fixtures. Runs only when the machinery changes.
+# docs.py / exports.py / bib_files.py and the figure tools (.github/tools/)
+# against throwaway repositories, and a real LibreOffice build of the fixtures.
+# Runs only when the machinery changes.
 
 on:
   pull_request:
     paths:
       - ".github/scripts/**"
+      - ".github/tools/**"
       - ".github/actions/**"
       - ".github/workflows/**"
   push:
     branches: [main]
     paths:
       - ".github/scripts/**"
+      - ".github/tools/**"
       - ".github/actions/**"
   workflow_dispatch:
 
