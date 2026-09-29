@@ -1,0 +1,30 @@
+name: tikz-tensors pin
+
+# The figures' TikZ format is a submodule whose main is the one canonical
+# tikz-tensors (always a release). A pin here may also be a proposal developed
+# in place on a <project>/<topic> branch. This check tells them apart:
+#   release                          -> OK
+#   a pushed commit, not a release   -> warning, naming the branch and how far it is from main
+#   a commit not on GitHub at all    -> error: nobody else can build with it
+
+on:
+  pull_request:
+    paths:
+      - ".gitmodules"
+      - ".github/tools/figures/**"
+  push:
+    branches: [main]
+    paths:
+      - ".gitmodules"
+      - ".github/tools/figures/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pin:
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","rosina"]') || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: .github/tools/figures/tikz-tensors.sh check

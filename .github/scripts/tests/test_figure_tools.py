@@ -154,8 +154,9 @@ def sty(version):
 
 
 class TikzTensorsSubmodule(unittest.TestCase):
-    """tikz-tensors.sh against a local tikz-tensors with releases v0.1.0 and v0.2.0
-    (and a v0.3.0 whose \\ProvidesPackage line wrongly says 0.2.9)."""
+    """tikz-tensors.sh against a local tikz-tensors: main carries releases v0.1.0 and
+    v0.2.0 and then a docs-only commit (still v0.2.0, as the gates keep main); a side
+    branch carries v0.3.0, a tag whose \\ProvidesPackage line wrongly says 0.2.9."""
 
     def setUp(self):
         root = tmpdir(self)
@@ -165,18 +166,20 @@ class TikzTensorsSubmodule(unittest.TestCase):
         self.origin = root / "tikz-tensors"
         (self.origin / "tex").mkdir(parents=True)
         self.git(self.origin, "init", "-q", "-b", "main")
-        for tag, version in (("v0.1.0", "0.1.0"), ("v0.2.0", "0.2.0"), ("v0.3.0", "0.2.9")):
-            (self.origin / "tex/tikz-tensors.sty").write_text(sty(version))
-            self.git(self.origin, "add", "-A")
-            self.git(self.origin, "commit", "-qm", tag)
-            self.git(self.origin, "tag", tag)
-        # v0.3.0 is broken on purpose; the newest good release is what "latest" must not
-        # guess around, so tests that want "latest" delete it first.
+        for version in ("0.1.0", "0.2.0"):
+            self.origin_commit({"tex/tikz-tensors.sty": sty(version)}, f"v{version}")
+            self.git(self.origin, "tag", f"v{version}")
+        self.origin_commit({"README.md": "docs\n"}, "docs after v0.2.0")
+        self.git(self.origin, "switch", "-q", "-c", "broken")
+        self.origin_commit({"tex/tikz-tensors.sty": sty("0.2.9")}, "broken")
+        self.git(self.origin, "tag", "v0.3.0")
+        self.git(self.origin, "switch", "-q", "main")
         self.env["TIKZ_TENSORS_URL"] = str(self.origin)
         self.repo = root / "project"
         (self.repo / ".github/tools/figures").mkdir(parents=True)
         shutil.copy(TOOLS / "tikz-tensors.sh", self.repo / ".github/tools/figures/")
         self.git(self.repo, "init", "-q", "-b", "main")
+        self.git(self.repo, "remote", "add", "origin", "https://example.org/me/My-Paper.git")
         self.git(self.repo, "add", "-A")
         self.git(self.repo, "commit", "-qm", "project")
         self.sub = self.repo / ".github/tools/figures/tikz-tensors"
@@ -186,9 +189,20 @@ class TikzTensorsSubmodule(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         return r.stdout
 
+    def origin_commit(self, files, message):
+        for rel, text in files.items():
+            (self.origin / rel).write_text(text)
+        self.git(self.origin, "add", "-A")
+        self.git(self.origin, "commit", "-qm", message)
+
     def script(self, *args, repo=None):
         return subprocess.run(["sh", ".github/tools/figures/tikz-tensors.sh", *args], cwd=repo or self.repo,
                               capture_output=True, text=True, env=self.env)
+
+    def ok(self, *args, repo=None):
+        r = self.script(*args, repo=repo)
+        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+        return r
 
     def version(self, repo=None):
         return ((repo or self.repo) / ".github/tools/figures/tikz-tensors/tex/tikz-tensors.sty").read_text()
@@ -196,69 +210,112 @@ class TikzTensorsSubmodule(unittest.TestCase):
     def staged_gitlink(self):
         return self.git(self.repo, "ls-files", "-s", "--", ".github/tools/figures/tikz-tensors").split()[:2]
 
-    def drop_broken_release(self):
-        self.git(self.origin, "tag", "-d", "v0.3.0")
+    # -- ensure -------------------------------------------------------------
 
-    def test_ensure_adds_it_at_the_newest_release(self):
-        self.drop_broken_release()
-        r = self.script("ensure")
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("v0.2.0", r.stderr)
+    def test_ensure_adds_it_at_main_which_is_the_newest_release(self):
+        r = self.ok("ensure")
+        self.assertIn("at v0.2.0", r.stderr)
         self.assertEqual(self.version(), sty("0.2.0"))
         self.assertEqual(self.staged_gitlink()[0], "160000", "the pin is staged as a submodule")
-        self.assertIn("tikz-tensors", (self.repo / ".gitmodules").read_text())
+        main = self.git(self.origin, "rev-parse", "main").strip()
+        self.assertEqual(self.staged_gitlink()[1], main, "main itself, docs commit included")
+        self.assertEqual(self.git(self.repo, "config", "push.recurseSubmodules").strip(), "check")
 
     def test_ensure_restores_what_use_this_template_drops(self):
         """A template copy has .gitmodules and an empty directory, but no pinned commit."""
-        self.drop_broken_release()
         (self.repo / ".gitmodules").write_text(
             '[submodule ".github/tools/figures/tikz-tensors"]\n'
             "\tpath = .github/tools/figures/tikz-tensors\n"
             "\turl = https://github.com/pen-sotashimozono/tikz-tensors\n")
         self.sub.mkdir()
-        r = self.script("ensure")
-        self.assertEqual(r.returncode, 0, r.stderr)
+        self.ok("ensure")
         self.assertEqual(self.version(), sty("0.2.0"))
         self.assertEqual(self.staged_gitlink()[0], "160000")
 
+    def test_ensure_refuses_a_main_that_is_not_a_release(self):
+        self.origin_commit({"tex/tikz-tensors.sty": sty("0.2.0") + "% unreleased\n"}, "ungated")
+        r = self.script("ensure")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("is not a release", r.stderr)
+
     def test_a_fresh_clone_is_initialised_at_the_recorded_pin(self):
-        self.assertEqual(self.script("pin", "v0.1.0").returncode, 0)
+        self.ok("pin", "v0.1.0")
         self.git(self.repo, "commit", "-qm", "pin v0.1.0")
         clone = self.repo.parent / "clone"
         self.git(self.repo.parent, "clone", "-q", str(self.repo), str(clone))
         self.assertFalse((clone / ".github/tools/figures/tikz-tensors/tex").exists())
-        r = self.script("ensure", repo=clone)
-        self.assertEqual(r.returncode, 0, r.stderr)
+        self.ok("ensure", repo=clone)
         self.assertEqual(self.version(clone), sty("0.1.0"), "the recorded pin, not the newest")
 
+    # -- pin ----------------------------------------------------------------
+
     def test_pin_moves_to_a_release_and_stages_it(self):
-        self.assertEqual(self.script("pin", "v0.2.0").returncode, 0)
+        self.ok("pin", "v0.2.0")
         before = self.staged_gitlink()[1]
-        r = self.script("pin", "v0.1.0")
-        self.assertEqual(r.returncode, 0, r.stderr)
+        self.ok("pin", "v0.1.0")
         self.assertEqual(self.version(), sty("0.1.0"))
         self.assertNotEqual(self.staged_gitlink()[1], before)
 
     def test_pin_refuses_a_missing_tag(self):
-        self.assertEqual(self.script("pin", "v0.2.0").returncode, 0)
+        self.ok("pin", "v0.2.0")
         r = self.script("pin", "v9.9.9")
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("no tag v9.9.9", r.stderr)
         self.assertEqual(self.version(), sty("0.2.0"))
 
     def test_pin_refuses_a_tag_whose_version_line_disagrees(self):
+        self.ok("pin", "v0.2.0")
         r = self.script("pin", "v0.3.0")
         self.assertNotEqual(r.returncode, 0)
-        self.assertIn("says v0.2.9", r.stderr)
+        self.assertIn("not a release", r.stderr)
+        self.assertEqual(self.version(), sty("0.2.0"))
 
-    def test_status_names_the_release_or_says_it_is_not_one(self):
-        self.assertEqual(self.script("pin", "v0.2.0").returncode, 0)
-        self.assertIn("= release v0.2.0", self.script("status").stdout)
+    # -- developing in place --------------------------------------------------
+
+    def develop(self):
+        """dev branch in the submodule, one commit on it."""
+        self.ok("pin", "latest")
+        self.git(self.repo, "commit", "-qm", "pin")
+        r = self.ok("dev", "fn-size")
+        self.assertIn("my-paper/fn-size", r.stdout)
         (self.sub / "tex/tikz-tensors.sty").write_text(sty("0.2.0") + "% an edit in place\n")
         self.git(self.sub, "commit", "-qam", "edit")
-        out = self.script("status").stdout
-        self.assertIn("not a release", out)
-        self.assertIn("differs from the commit this repository records", out)
+        self.git(self.repo, "add", ".github/tools/figures/tikz-tensors")
+        self.git(self.repo, "commit", "-qm", "build with the proposal")
+
+    def test_status_of_a_release(self):
+        self.ok("pin", "v0.2.0")
+        out = self.ok("status").stdout
+        self.assertIn("release v0.2.0", out)
+        self.assertNotIn("not pushed", out)
+
+    def test_status_of_an_unpushed_proposal(self):
+        self.develop()
+        out = self.ok("status").stdout
+        self.assertIn("(my-paper/fn-size)", out)
+        self.assertIn("proposal, not a release", out)
+        self.assertIn("main: 1 ahead, 0 behind", out)
+        self.assertIn("not pushed", out)
+
+    def test_check_passes_a_release(self):
+        self.ok("pin", "v0.2.0")
+        self.git(self.repo, "commit", "-qm", "pin")
+        out = self.ok("check").stdout
+        self.assertIn("release v0.2.0", out)
+        self.assertTrue(out.rstrip().endswith("OK"), out)
+
+    def test_check_fails_an_unpushed_pin_and_warns_on_a_pushed_proposal(self):
+        self.develop()
+        clone = self.repo.parent / "ci"
+        self.git(self.repo.parent, "clone", "-q", str(self.repo), str(clone))
+        r = self.script("check", repo=clone)
+        self.assertNotEqual(r.returncode, 0, "the pinned commit exists only in the project's submodule")
+        self.assertIn("is not on", r.stdout)
+        self.git(self.sub, "push", "-q", "origin", "my-paper/fn-size")
+        r = self.script("check", repo=clone)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("::warning::", r.stdout)
+        self.assertIn("on my-paper/fn-size", r.stdout)
 
 
 if __name__ == "__main__":

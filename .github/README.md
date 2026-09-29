@@ -26,7 +26,7 @@ runs once and deletes itself: every document goes to `0.1.0`, the template's
 changelog is cleared, `LICENSE` is removed — the MIT licence covers the
 template, not the work you write with it — and the
 [tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors) submodule
-(the figures' TikZ format) is pinned at its newest release, since the template
+(the figures' TikZ format) is pinned at its main — always its newest release — since the template
 copy leaves it empty. Clone with `--recurse-submodules`, or let
 `.github/tools/figures/build.sh` fetch it on first use.
 

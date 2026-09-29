@@ -64,22 +64,33 @@ them sits in `.github/tools/figures/`. A `.tex` page starts `\input{preamble}`
 and a tensor diagram adds `\usepackage{tikz-tensors}`
 ([pen-sotashimozono/tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors): wavy legs for continuous arguments, plain lines for finite indices,
 circles for functions, squares for coefficient arrays; `\tnswap`; the shared
-theme's colours). It is a git submodule at `.github/tools/figures/tikz-tensors/`,
-so the format can be edited in place while the figures that use it rebuild:
-commit and push from inside it, then pin a release before merging here.
+theme's colours). It is a git submodule at `.github/tools/figures/tikz-tensors/`.
+**Its `main` is the one canonical tikz-tensors, always a release** (gated in
+that repository: PRs only, version checked, released on merge). Here it is
+either pinned at a release, or developed in place on a branch named after this
+project — a proposal, which you decide separately to send to tikz-tensors as a
+PR; merged, it becomes the next release.
 
 ```sh
-.github/tools/figures/tikz-tensors.sh status        # the version, and whether it is a release
-.github/tools/figures/tikz-tensors.sh pin v0.3.0    # build with that release (staged; commit it)
-.github/tools/figures/tikz-tensors.sh pin latest
+.github/tools/figures/tikz-tensors.sh status        # release or proposal; ahead/behind main; pushed?
+.github/tools/figures/tikz-tensors.sh pin latest    # tikz-tensors' main = its newest release (staged)
+.github/tools/figures/tikz-tensors.sh pin v0.3.0    # a particular release
+.github/tools/figures/tikz-tensors.sh dev <topic>   # branch <project>/<topic> inside the submodule
 ```
 
-The version is the `.sty`'s `\ProvidesPackage` line, which `pin` checks against
-the tag. build.sh fetches the submodule itself when a checkout lacks it (a
-clone without `--recurse-submodules`), and `Initialize.yml` re-pins it at the
-newest release in a repository made from this template, because "Use this
-template" copies `.gitmodules` but not the pinned commit. Once fetched,
-figures build offline.
+Developing: `dev <topic>`, edit inside the submodule, build here (the figures
+use the working copy at once), commit and push **inside it first**, then
+`git add` the submodule here. `ensure` sets `push.recurseSubmodules=check`,
+so git refuses to push a pin whose commit is not on GitHub. The **tikz-tensors
+pin** workflow says the same on every PR: a release passes, a pushed proposal
+passes with a warning naming its branch and its distance from main, a commit
+not on GitHub fails. The version is the `.sty`'s `\ProvidesPackage` line;
+`pin` accepts only a commit whose package is exactly the release that line
+names. build.sh fetches the submodule when a checkout lacks it (a clone
+without `--recurse-submodules`), and `Initialize.yml` pins it at tikz-tensors'
+main in a repository made from this template, because "Use this template"
+copies `.gitmodules` but not the pinned commit. Once fetched, figures build
+offline.
 Pictures are TikZ (a project's own parts go in a `.sty` next to build.sh);
 `.py` pages are for computed plots. build.sh finds the shared files
 through TEXINPUTS and passes
