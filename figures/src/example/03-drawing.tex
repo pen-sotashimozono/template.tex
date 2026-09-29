@@ -1,0 +1,18 @@
+% example, page 03: a schematic picture with tikz-tensors' parts -- two nuclei, two
+% electrons and the dashed interactions between them. Labels are LaTeX math, so they
+% match the equation pages.
+\documentclass[border=4pt]{standalone}
+\input{preamble}
+\usepackage{tikz-tensors}
+
+\begin{document}
+\begin{tikzpicture}
+  \coordinate (A) at (0,0); \coordinate (B) at (2.8,0);
+  \coordinate (e1) at (-0.5,1.6); \coordinate (e2) at (3.4,1.5);
+  \tncloud{(1.4,0)}{2.2}{0.8}[0.3]
+  \foreach \p/\q in {e1/A,e1/B,e2/A,e2/B,e1/e2} {\tncoulomb{(\p)}{(\q)}}
+  \tnnucleus{(A)} \tnnucleus{(B)}
+  \tnelectron[1]{(e1)} \tnelectron[2]{(e2)}
+  \node[font=\small] at (1.45,1.85) {$r_{12}$};
+\end{tikzpicture}
+\end{document}

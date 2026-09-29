@@ -57,7 +57,7 @@ CLAUDE.md  LICENSE          # root-only, see below
 
 .github/CHANGELOG.md        # one entry per version
 .github/scripts/            # bump.sh, docs.py, closure.py, diff.sh, arxiv_bundle.sh, refs_sync.sh, fetch_sources.sh, bib_files.py
-.github/tools/figures/      # figure build (build.sh, latexmkrc, preamble, tensor, schematic), paper_figures.py
+.github/tools/figures/      # figure build (build.sh, latexmkrc, preamble), tikz-tensors/ (vendored), paper_figures.py
 .github/workflows/          # build, version checks, release, reference verification
 .claude/skills/             # changelog, references (doiget), figure-pages, paper-figures
 

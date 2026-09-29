@@ -1,0 +1,88 @@
+%% tikz-tensors.sty -- one TikZ format for tensor-network diagrams and the
+%% schematic pictures that go with them, in the shared theme (theme/tokens.toml).
+%%
+%%   \usepackage{tikz-tensors}
+%%
+%% The notation distinguishes what a leg carries:
+%%   cont   wavy leg, electron colour: a continuous argument (r, r_1, x)
+%%   disc   plain line: a finite index (i, mu, a bond)
+%% and what a node is:
+%%   fn, fnwide, fntall      circle / rounded box, electron colour: a function of position
+%%   coef, coefwide, coeftall square / box: an array of numbers (C, c, A^n)
+%%   op, opwide              square-cornered box in ink: an operator (H, the MPO)
+%%   frame                   dashed box around nodes that contract to one object
+%% Joining two legs means summing over that index. So the expansion
+%%   psi(r1, r2) = sum_ij C_ij phi_i(r1) phi_j(r2)
+%% is a coefwide C with two disc legs down to two fn phi, each with a cont leg:
+%% the numbers sit on the basis functions, which sit on space.
+%%
+%% Exchanging two fermion legs is \tnswap (a sign in the text, not in the drawing).
+%% Schematic parts: \tnnucleus, \tnelectron, \tncloud, \tncoulomb; colours ele,
+%% nuc, exchange, exact and the page tokens tt<name> come from
+%% tikz-tensors-colors.tex, generated from the theme.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{tikz-tensors}[2026/09/29 v0.1.0 tensor-network diagrams and schematics in one theme]
+
+\RequirePackage{xcolor}
+\RequirePackage{tikz}
+\usetikzlibrary{decorations.pathmorphing,calc,fadings}
+\input{tikz-tensors-colors.tex}
+
+% ---- tensor diagrams ---------------------------------------------------------
+\tikzset{
+  fn/.style       = {circle, draw=ele, fill=ele!12, line width=0.9pt,
+                     minimum size=8mm, inner sep=0pt},
+  fnwide/.style   = {fn, rectangle, rounded corners=3.5mm, minimum width=17mm,
+                     minimum height=8mm},
+  fntall/.style   = {fn, rectangle, rounded corners=3.5mm, minimum width=8mm,
+                     minimum height=17mm},
+  coef/.style     = {rectangle, draw=black!80, fill=black!6, line width=0.9pt,
+                     minimum size=7mm, inner sep=0pt},
+  coefwide/.style = {coef, minimum width=17mm, minimum height=7mm},
+  coeftall/.style = {coef, minimum width=7mm, minimum height=17mm},
+  op/.style       = {rectangle, draw=ttfg, fill=white, line width=0.9pt,
+                     minimum size=7mm, inner sep=1pt},
+  opwide/.style   = {op, minimum width=17mm},
+  frame/.style    = {draw=black!50, dashed, rounded corners=2mm, line width=0.7pt},
+  cont/.style     = {draw=ele, line width=0.9pt, decorate,
+                     decoration={snake, amplitude=0.55mm, segment length=2.4mm,
+                                 pre length=0.4mm, post length=0.8mm}},
+  disc/.style     = {draw=black!80, line width=0.9pt},
+  leg/.style      = {font=\small, inner sep=2pt},
+  tn swap cont/.style = {draw=ele, line width=0.9pt},
+  tn swap disc/.style = {draw=black!80, line width=0.9pt},
+}
+
+% \tnswap[<kind>]{<left top>}{<right top>}{<drop>}
+% Two legs that start at <left top> and <right top> and end <drop> lower,
+% exchanged: short straight stubs of <kind> (cont or disc) at both ends, joined
+% by a smooth crossing (a snake decoration on a diagonal reads as noise).
+\makeatletter
+\newcommand{\tnswap}[4][cont]{%
+  \path #2 coordinate (tn@l) #3 coordinate (tn@r);
+  \draw[#1] (tn@l) -- ++(0,-0.3) coordinate (tn@l1);
+  \draw[#1] (tn@r) -- ++(0,-0.3) coordinate (tn@r1);
+  \draw[#1] ($(tn@l)+(0,-#4)$) -- ++(0,0.3) coordinate (tn@l2);
+  \draw[#1] ($(tn@r)+(0,-#4)$) -- ++(0,0.3) coordinate (tn@r2);
+  \draw[tn swap #1] (tn@l1) .. controls +(0,-0.3) and +(0,0.3) .. (tn@r2);
+  \draw[tn swap #1] (tn@r1) .. controls +(0,-0.3) and +(0,0.3) .. (tn@l2);
+}
+\makeatother
+
+% ---- schematic parts -----------------------------------------------------------
+% A nucleus (orange disc with +), an electron (blue dot; [i] marks the one followed),
+% an electron cloud with fuzzy edges, and a dashed Coulomb line.
+\tikzfading[name=tn fuzzy, inner color=transparent!0, outer color=transparent!100]
+\newcommand{\tnnucleus}[1]{%
+  \fill[nuc] #1 circle (0.3);
+  \node[text=white, font=\bfseries] at #1 {$+$};}
+\NewDocumentCommand{\tnelectron}{o m}{%
+  \IfNoValueTF{#1}
+    {\fill[ele] #2 circle (0.1);}
+    {\fill[ele, draw=ttfg, line width=0.6pt] #2 circle (0.14);
+     \node[above=1pt, font=\small] at #2 {$#1$};}}
+% \tncloud{<centre>}{<x radius>}{<y radius>}[<opacity>]
+\NewDocumentCommand{\tncloud}{m m m O{0.45}}{%
+  \fill[ele, fill opacity=#4, path fading=tn fuzzy] #1 ellipse ({#2} and {#3});}
+\newcommand{\tncoulomb}[2]{\draw[black!50, dashed, line width=0.6pt] #1 -- #2;}
+\endinput

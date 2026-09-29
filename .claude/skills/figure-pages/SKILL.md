@@ -1,6 +1,6 @@
 ---
 name: figure-pages
-description: Make or change a figure page - a standalone equation, a TikZ tensor diagram, or a Python drawing - under figures/src/, built to figures/assets/ as SVG (and PDF for the documents). Use whenever a slide or a document needs a new formula or schematic picture, or a figure's notation, numbering or folder changes.
+description: Make or change a figure page - a standalone equation, a TikZ tensor diagram or schematic picture (tikz-tensors), or a computed plot - under figures/src/, built to figures/assets/ as SVG (and PDF for the documents). Use whenever a slide or a document needs a new formula or schematic picture, or a figure's notation, numbering or folder changes.
 ---
 
 # Figure pages: one output per source
@@ -10,10 +10,11 @@ description: Make or change a figure page - a standalone equation, a TikZ tensor
 
 `figures/` holds only what a writer looks at: pages (`src/`), what they build
 into (`assets/`), and other papers' figures (`papers/`, the `paper-figures`
-skill). The shared files a page uses — `preamble.tex`, `tensor.tex`,
-`schematic.py` — and the build's `latexmkrc` live in `.github/tools/figures/`;
-build.sh puts that directory on TEXINPUTS and PYTHONPATH, so a page just
-writes `\input{preamble}` or `import schematic` and never names it.
+skill). The shared files a page uses — `preamble.tex` and the vendored
+`tikz-tensors/` ([pen-sotashimozono/tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors), pinned by `update-tikz-tensors.sh`) — and the
+build's `latexmkrc` live in `.github/tools/figures/`; build.sh puts that
+directory on TEXINPUTS, so a page just writes `\input{preamble}` and
+`\usepackage{tikz-tensors}` and never names it.
 
 Topics are folders in reading order (`01-model`, `02-method`, …); pages are
 numbered inside them (`00-…`, `01-…`, `01b-…`). `figures/src/example/` shows
@@ -37,16 +38,19 @@ one page of each kind; delete it once a real topic exists.
 
 - **Equation** (`.tex`): `\documentclass[border=4pt]{standalone}`,
   `\input{preamble}`, one `$\displaystyle … $`.
-- **Tensor diagram** (`.tex`): add `\input{tensor}` and use its styles —
+- **Tensor diagram** (`.tex`): add `\usepackage{tikz-tensors}` and use its styles —
   `cont` wavy legs for continuous arguments (**r**), `disc` plain lines for
   finite indices, `fn`/`fnwide`/`fntall` circles and boxes for functions,
   `coef`/`coefwide`/`coeftall` squares for arrays, `frame` for a group that
-  contracts to one array. Conventions are in the header of
-  `.github/tools/figures/tensor.tex`. Put the coefficients on top of the basis
+  contracts to one array, `\tnswap` to exchange two fermion legs. Conventions
+  are in the header of `tikz-tensors.sty` and its README. Put the coefficients on top of the basis
   functions, so the basis visibly sits between the numbers and space.
-- **Drawing** (`.py`): a script that writes the SVG path it is given, using
-  `schematic`'s helpers and colours (`ELE`, `NUC`); the SVG has only a
-  viewBox.
+- **Schematic picture** (`.tex`): `\usepackage{tikz-tensors}` and its parts
+  `\tnnucleus`, `\tnelectron[<label>]`, `\tncloud`, `\tncoulomb`; labels are LaTeX
+  math, so they match the equations.
+- **Computed plot** (`.py`): a script that writes the SVG path it is given
+  (matplotlib with `svg.fonttype = path`, say); run it with `PYTHON=` an
+  interpreter that has what it imports.
 
 A figure showing *another paper's* result is never drawn here: extract the
 original with the **`paper-figures`** skill.

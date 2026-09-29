@@ -12,10 +12,12 @@
 #
 # figures/ holds only what a writer looks at: the pages (src/) and what they
 # build into (assets/). Everything that runs them sits here, next to this
-# script: preamble.tex (every .tex page does \input{preamble}), tensor.tex
-# (\input{tensor} for tensor diagrams), schematic.py (imported by .py pages),
-# and latexmkrc. They are found through TEXINPUTS and PYTHONPATH, so a page
-# never names this directory.
+# script: preamble.tex (every .tex page does \input{preamble}), tikz-tensors/
+# (the vendored TikZ format and theme: \usepackage{tikz-tensors} for tensor
+# diagrams and schematic pictures; update-tikz-tensors.sh pins its version),
+# and latexmkrc. They are found through TEXINPUTS (and PYTHONPATH, for any
+# helper module a Python page wants to share), so a page never names this
+# directory. Python pages are for computed plots; pictures are TikZ.
 #
 # A page is rebuilt when its SVG is missing or older than the page or a shared
 # file of its own kind (*.tex here for LaTeX, *.py here for Python), which keeps
@@ -68,12 +70,15 @@ for arg in "${args[@]}"; do
 done
 
 # A page depends on itself and on the shared files of its own kind here: a
-# .tex page on $TOOLS/*.tex, a .py page on $TOOLS/*.py.
+# .tex page on $TOOLS/*.tex and the vendored tikz-tensors (a new release
+# restyles every LaTeX page), a .py page on $TOOLS/*.py.
 stale() {
   local svg="$1" src="$2" dep
   [ "$force" -eq 1 ] || [ ! -f "$svg" ] || [ "$src" -nt "$svg" ] && return 0
   [ "$pdf" -eq 1 ] && [ "${src##*.}" = tex ] && [ ! -f "${svg%.svg}.pdf" ] && return 0
-  for dep in "$TOOLS"/*."${src##*.}"; do
+  local deps=("$TOOLS"/*."${src##*.}")
+  [ "${src##*.}" = tex ] && deps+=("$TOOLS"/tikz-tensors/tex/*)
+  for dep in "${deps[@]}"; do
     [ -f "$dep" ] && [ "$dep" -nt "$svg" ] && return 0
   done
   return 1
@@ -108,7 +113,7 @@ for src in "${sources[@]}"; do
       # Write into .build/ and move on success, so a failed run (a missing
       # pyscf, say) leaves the existing SVG in place.
       mkdir -p "$BUILD/$topic"
-      # No __pycache__ next to schematic.py: nothing is written outside assets/.
+      # No __pycache__ next to a shared module: nothing is written outside assets/.
       if ! PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$TOOLS${PYTHONPATH:+:$PYTHONPATH}" \
           "$PYTHON" "$src" "$BUILD/$topic/$name.svg" >/dev/null; then
         echo "error: $src failed (PYTHON=$PYTHON); $svg left as it was" >&2

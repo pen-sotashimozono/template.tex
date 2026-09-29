@@ -35,7 +35,7 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
 | `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py` |
-| `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `tensor.tex`, `schematic.py`, `paper_figures.py` |
+| `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `paper_figures.py`, and `tikz-tensors/` (the vendored TikZ format and theme, pinned by `update-tikz-tensors.sh`) |
 | `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure) |
 | `out/` | build output (gitignored) |
 
@@ -61,10 +61,14 @@ tensor diagram) or `<page>.py` (a script that writes the SVG path it is given)
 
 `figures/` holds only pages and what they build into; everything that runs
 them sits in `.github/tools/figures/`. A `.tex` page starts `\input{preamble}`
-(and `\input{tensor}` for a tensor diagram: wavy legs for continuous
-arguments, plain lines for finite indices, circles for functions, squares for
-coefficient arrays — conventions in its header); a `.py` page imports
-`schematic`. build.sh finds them through TEXINPUTS and PYTHONPATH and passes
+and a tensor diagram or schematic picture adds `\usepackage{tikz-tensors}`
+([pen-sotashimozono/tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors): wavy legs for continuous arguments, plain lines for finite indices,
+circles for functions, squares for coefficient arrays; `\tnswap`, `\tnnucleus`,
+`\tnelectron`, `\tncloud`, `\tncoulomb`; the shared theme's colours). It is
+vendored at a pinned tag in `.github/tools/figures/tikz-tensors/`
+(`update-tikz-tensors.sh <tag>` moves it), so figures build offline. `.py`
+pages are for computed plots; pictures are TikZ. build.sh finds the shared files
+through TEXINPUTS and passes
 its own `latexmkrc` with `-r`, so a page never names that directory, and the
 root `.latexmkrc` never applies to pages. A document includes a page as
 `\includegraphics{assets/<topic>/<page>}` (graphicspath `figures/`); the arXiv
