@@ -30,11 +30,13 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `references.bib` | bibliography — from `doiget cite`, never hand-written |
 | `docs.toml` | root documents and versions — the version authority |
 | `refs/`, `refs/src/` | one PDF per bibkey; full text for grepping |
-| `figures/`, `notes/` | figures (PDF only); children of `notes.tex` |
+| `figures/` | the documents' own figures (PDF) at the top; figure pages in `src/<topic>/`, built into `assets/<topic>/` (SVG, and PDF with `--pdf`); cited papers' own figures as `papers/<bibkey>-fig<N>.svg` — see below |
+| `notes/` | children of `notes.tex` |
 | `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
-| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `exports.py`, `soffice_pdf.py` |
-| `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget) |
+| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py` |
+| `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `tensor.tex`, `schematic.py`, `paper_figures.py` |
+| `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure) |
 | `out/` | build output (gitignored) |
 
 `latexmk main.tex` → `out/main.pdf`, `latexmk notes.tex` → `out/notes.pdf`. One
@@ -44,6 +46,37 @@ Before editing either preamble: **revtex4-2 bundles its own `natbib`**, so only
 `notes.tex` loads it. `\affiliation`, `\email` and `acknowledgments` are
 revtex-only, so `notes.tex` reimplements them — that is what lets the same
 markup compile under either class.
+
+## Figures: pages in `figures/src/`, tools in `.github/tools/figures/`
+
+A figure you make is a **page**, one output per source:
+`figures/src/<topic>/<page>.tex` (standalone LaTeX: an equation, or a TikZ
+tensor diagram) or `<page>.py` (a script that writes the SVG path it is given)
+→ `figures/assets/<topic>/<page>.svg`, and `.pdf` for LaTeX pages with `--pdf`.
+
+```sh
+.github/tools/figures/build.sh               # every page that is out of date
+.github/tools/figures/build.sh --pdf 02-x    # one topic, keeping PDFs for \includegraphics
+```
+
+`figures/` holds only pages and what they build into; everything that runs
+them sits in `.github/tools/figures/`. A `.tex` page starts `\input{preamble}`
+(and `\input{tensor}` for a tensor diagram: wavy legs for continuous
+arguments, plain lines for finite indices, circles for functions, squares for
+coefficient arrays — conventions in its header); a `.py` page imports
+`schematic`. build.sh finds them through TEXINPUTS and PYTHONPATH and passes
+its own `latexmkrc` with `-r`, so a page never names that directory, and the
+root `.latexmkrc` never applies to pages. A document includes a page as
+`\includegraphics{assets/<topic>/<page>}` (graphicspath `figures/`); the arXiv
+bundle keeps paths below `figures/`, so that still resolves there.
+`assets/` mirrors `src/`: an output whose source is gone is deleted.
+The **`figure-pages`** skill carries the rules (formula only, one line per
+page, numbers from a source, look before reporting).
+
+A figure showing **another paper's result** is never redrawn: the
+**`paper-figures`** skill extracts the original from its arXiv source, or crops
+it from `refs/<bibkey>.pdf`, into `figures/papers/<bibkey>-fig<N>.svg`, with
+the caption in the SVG's `<desc>`. Cite the paper wherever it is shown.
 
 ## Versions — bump what the PR touched, and only that
 
@@ -123,7 +156,11 @@ Greek letters.
   *different, real* paper, which is worse than a broken link.
 - **A resolving DOI is not proof the citation is right.** Check the title and
   authors, then read the PDF to confirm it supports your claim.
-- Keep `refs/<bibkey>.pdf` in sync with the key in `references.bib`.
+- Keep `refs/<bibkey>.pdf` in sync with the key in `references.bib`. Each entry
+  with a local PDF carries `file = {refs/<bibkey>.pdf}`, written by
+  `.github/scripts/bib_files.py` (run by `refs_sync.sh`, checked in CI) — never
+  by hand. A PDF fetched by hand (a licensed download) goes to
+  `refs/<bibkey>.pdf`; then run `refs_sync.sh` and `fetch_sources.sh`.
 - Some works have no OA PDF; `doiget fetch` stores metadata only. Cite normally
   and note the absence.
 

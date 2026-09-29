@@ -45,5 +45,11 @@ _minted*/
 !figures/
 !figures/**
 
+# ただし .github/tools/figures/build.sh の中間生成物は除外する。上の打ち消しより後に置くこと
+# (build.sh は終了時に消すが、途中で止めると残る)
+/figures/.build/
+# Python のバイトコードも同様 (上の __pycache__/ は !figures/** に打ち消される)
+/figures/**/__pycache__/
+
 # PowerPoint / Office lock files
 ~$*
