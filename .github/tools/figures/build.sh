@@ -98,7 +98,9 @@ for src in "${sources[@]}"; do
     *.tex)
       mkdir -p "$BUILD/$topic"
       # The trailing ':' keeps TeX's default search path after the shared files.
-      if ! TEXINPUTS="$TOOLS//:${TEXINPUTS:-}" \
+      # A fixed date makes the PDF (and its /ID) the same bytes on every build,
+      # so a rebuilt page that did not change shows no diff.
+      if ! TEXINPUTS="$TOOLS//:${TEXINPUTS:-}" SOURCE_DATE_EPOCH=0 FORCE_SOURCE_DATE=1 \
           latexmk -r "$TOOLS/latexmkrc" -outdir="$BUILD/$topic" "$src" >/dev/null 2>&1; then
         echo "error: $src failed:" >&2
         grep -A4 '^!\|:[0-9]*:' "$BUILD/$topic/$name.log" >&2 || true
