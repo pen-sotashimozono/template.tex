@@ -1,9 +1,15 @@
 name: LibreOffice
 description: Headless LibreOffice with Japanese fonts, and Office fonts mapped to free equivalents.
+# GitHub-hosted: apt packages and the font mapping in the user's fontconfig.
+# rosina (self-hosted, no sudo): LibreOffice lives in the runner user's home,
+# installed once from the official deb tarball (dpkg-deb -x, no root) and linked
+# from ~/.local/bin; UNO runs on the Python it bundles. The font mapping is put in
+# for this job only, through FONTCONFIG_FILE, so the machine's owner keeps theirs.
 runs:
   using: composite
   steps:
-    - shell: bash
+    - if: runner.environment == 'github-hosted'
+      shell: bash
       run: |
         sudo apt-get update -qq
         sudo apt-get install -y -qq --no-install-recommends \
@@ -13,3 +19,38 @@ runs:
         mkdir -p ~/.config/fontconfig
         cp "$GITHUB_ACTION_PATH/fonts.conf" ~/.config/fontconfig/fonts.conf
         fc-cache -f >/dev/null
+
+    - if: runner.environment != 'github-hosted'
+      shell: bash
+      env:
+        LO_VERSION: "26.8.0"
+        LO_SHA256: d0a6031a3837e48f9854e6d2da6489b9fadbd814afa4741fa32a197741663a22
+        LO_MIRROR: https://ftp.jaist.ac.jp/pub/tdf/libreoffice/stable
+      run: |
+        set -euo pipefail
+        export PATH="$HOME/.local/bin:$PATH"
+        if ! command -v soffice >/dev/null; then
+          F="LibreOffice_${LO_VERSION}_Linux_x86-64_deb.tar.gz"
+          T="$(mktemp -d)"
+          trap 'rm -rf "$T"' EXIT
+          curl -sfL -o "$T/$F" "$LO_MIRROR/$LO_VERSION/deb/x86_64/$F"
+          echo "$LO_SHA256  $T/$F" | sha256sum -c -
+          tar xzf "$T/$F" -C "$T"
+          DEST="$HOME/opt/libreoffice-$LO_VERSION"
+          mkdir -p "$DEST"
+          for d in "$T"/LibreOffice_*/DEBS/*.deb; do dpkg-deb -x "$d" "$DEST"; done
+          mkdir -p "$HOME/.local/bin"
+          ln -sfn "$(ls -d "$DEST"/opt/libreoffice*/program/soffice | head -1)" "$HOME/.local/bin/soffice"
+        fi
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+        soffice --version | head -1
+        conf="$RUNNER_TEMP/fonts.conf"
+        {
+          echo '<?xml version="1.0"?>'
+          echo '<!DOCTYPE fontconfig SYSTEM "fonts.dtd">'
+          echo '<fontconfig>'
+          echo '  <include ignore_missing="yes">/etc/fonts/fonts.conf</include>'
+          echo "  <include>$GITHUB_ACTION_PATH/fonts.conf</include>"
+          echo '</fontconfig>'
+        } > "$conf"
+        echo "FONTCONFIG_FILE=$conf" >> "$GITHUB_ENV"
