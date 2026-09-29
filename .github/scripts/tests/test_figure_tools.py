@@ -4,15 +4,13 @@
 
 No TeX and no network: build.sh is driven with Python pages only (they write
 their SVG directly), arxiv_bundle.sh with stub latexpand / latexmk, and
-update-tikz-tensors.sh with local file:// tarballs.
+tikz-tensors.sh with a local tikz-tensors repository and throwaway projects.
 """
 import importlib.util
-import io
 import os
 import pathlib
 import shutil
 import subprocess
-import tarfile
 import tempfile
 import time
 import unittest
@@ -151,62 +149,173 @@ class ArxivBundle(unittest.TestCase):
         self.assertNotIn("other-fig1.pdf", shipped)
 
 
-def release_tarball(path, tag, files):
-    """A GitHub-style source tarball: everything under one top-level directory."""
-    with tarfile.open(path, "w:gz") as tar:
-        for rel, text in files.items():
-            data = text.encode()
-            info = tarfile.TarInfo(f"tikz-tensors-{tag.lstrip('v')}/{rel}")
-            info.size = len(data)
-            tar.addfile(info, io.BytesIO(data))
+def sty(version):
+    return f"\\ProvidesPackage{{tikz-tensors}}[2026/09/29 v{version} test]\n"
 
 
-FULL = {"tex/tikz-tensors.sty": "% new sty\n", "tex/tikz-tensors-colors.tex": "% new colours\n",
-        "theme/theme.css": "/* new */\n", "theme/tokens.toml": "# new\n", "LICENSE": "MIT\n"}
+class TikzTensorsSubmodule(unittest.TestCase):
+    """tikz-tensors.sh against a local tikz-tensors: main carries releases v0.1.0 and
+    v0.2.0 and then a docs-only commit (still v0.2.0, as the gates keep main); a side
+    branch carries v0.3.0, a tag whose \\ProvidesPackage line wrongly says 0.2.9."""
 
-
-class UpdateTikzTensors(unittest.TestCase):
     def setUp(self):
-        self.root = tmpdir(self)
-        tools = self.root / "tools"
-        tools.mkdir()
-        shutil.copy(TOOLS / "update-tikz-tensors.sh", tools)
-        self.script = tools / "update-tikz-tensors.sh"
-        self.vendored = tools / "tikz-tensors"
-        (self.vendored / "tex").mkdir(parents=True)
-        (self.vendored / "tex/tikz-tensors.sty").write_text("% old sty\n")
+        root = tmpdir(self)
+        self.env = dict(os.environ, GIT_CONFIG_COUNT="1", GIT_CONFIG_KEY_0="protocol.file.allow",
+                        GIT_CONFIG_VALUE_0="always", GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t",
+                        GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
+        self.origin = root / "tikz-tensors"
+        (self.origin / "tex").mkdir(parents=True)
+        self.git(self.origin, "init", "-q", "-b", "main")
+        for version in ("0.1.0", "0.2.0"):
+            self.origin_commit({"tex/tikz-tensors.sty": sty(version)}, f"v{version}")
+            self.git(self.origin, "tag", f"v{version}")
+        self.origin_commit({"README.md": "docs\n"}, "docs after v0.2.0")
+        self.git(self.origin, "switch", "-q", "-c", "broken")
+        self.origin_commit({"tex/tikz-tensors.sty": sty("0.2.9")}, "broken")
+        self.git(self.origin, "tag", "v0.3.0")
+        self.git(self.origin, "switch", "-q", "main")
+        self.env["TIKZ_TENSORS_URL"] = str(self.origin)
+        self.repo = root / "project"
+        (self.repo / ".github/tools/figures").mkdir(parents=True)
+        shutil.copy(TOOLS / "tikz-tensors.sh", self.repo / ".github/tools/figures/")
+        self.git(self.repo, "init", "-q", "-b", "main")
+        self.git(self.repo, "remote", "add", "origin", "https://example.org/me/My-Paper.git")
+        self.git(self.repo, "add", "-A")
+        self.git(self.repo, "commit", "-qm", "project")
+        self.sub = self.repo / ".github/tools/figures/tikz-tensors"
 
-    def run_script(self, tag, url):
-        return subprocess.run(["sh", str(self.script), tag], cwd=self.root, capture_output=True, text=True,
-                              env=dict(os.environ, TIKZ_TENSORS_URL=url))
-
-    def assert_untouched(self):
-        self.assertEqual((self.vendored / "tex/tikz-tensors.sty").read_text(), "% old sty\n")
-        self.assertEqual(sorted(p.name for p in self.vendored.parent.iterdir()),
-                         ["tikz-tensors", "update-tikz-tensors.sh"], "no half-built copy left behind")
-
-    def test_a_release_replaces_the_copy_whole(self):
-        tarball = self.root / "rel.tar.gz"
-        release_tarball(tarball, "v0.2.0", FULL)
-        r = self.run_script("v0.2.0", tarball.as_uri())
+    def git(self, where, *args):
+        r = subprocess.run(["git", "-C", str(where), *args], capture_output=True, text=True, env=self.env)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.vendored / "tex/tikz-tensors.sty").read_text(), "% new sty\n")
-        self.assertTrue((self.vendored / "LICENSE").is_file())
-        self.assertEqual(sorted(p.name for p in self.vendored.iterdir()), ["LICENSE", "tex", "theme"])
+        return r.stdout
 
-    def test_a_failed_download_says_so_and_changes_nothing(self):
-        r = self.run_script("v9.9.9", (self.root / "no-such.tar.gz").as_uri())
-        self.assertNotEqual(r.returncode, 0)
-        self.assertIn("could not download", r.stderr)
-        self.assert_untouched()
+    def origin_commit(self, files, message):
+        for rel, text in files.items():
+            (self.origin / rel).write_text(text)
+        self.git(self.origin, "add", "-A")
+        self.git(self.origin, "commit", "-qm", message)
 
-    def test_an_incomplete_release_changes_nothing(self):
-        tarball = self.root / "rel.tar.gz"
-        release_tarball(tarball, "v0.2.0", {k: v for k, v in FULL.items() if k != "LICENSE"})
-        r = self.run_script("v0.2.0", tarball.as_uri())
+    def script(self, *args, repo=None):
+        return subprocess.run(["sh", ".github/tools/figures/tikz-tensors.sh", *args], cwd=repo or self.repo,
+                              capture_output=True, text=True, env=self.env)
+
+    def ok(self, *args, repo=None):
+        r = self.script(*args, repo=repo)
+        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+        return r
+
+    def version(self, repo=None):
+        return ((repo or self.repo) / ".github/tools/figures/tikz-tensors/tex/tikz-tensors.sty").read_text()
+
+    def staged_gitlink(self):
+        return self.git(self.repo, "ls-files", "-s", "--", ".github/tools/figures/tikz-tensors").split()[:2]
+
+    # -- ensure -------------------------------------------------------------
+
+    def test_ensure_adds_it_at_main_which_is_the_newest_release(self):
+        r = self.ok("ensure")
+        self.assertIn("at v0.2.0", r.stderr)
+        self.assertEqual(self.version(), sty("0.2.0"))
+        self.assertEqual(self.staged_gitlink()[0], "160000", "the pin is staged as a submodule")
+        main = self.git(self.origin, "rev-parse", "main").strip()
+        self.assertEqual(self.staged_gitlink()[1], main, "main itself, docs commit included")
+        self.assertEqual(self.git(self.repo, "config", "push.recurseSubmodules").strip(), "check")
+
+    def test_ensure_restores_what_use_this_template_drops(self):
+        """A template copy has .gitmodules and an empty directory, but no pinned commit."""
+        (self.repo / ".gitmodules").write_text(
+            '[submodule ".github/tools/figures/tikz-tensors"]\n'
+            "\tpath = .github/tools/figures/tikz-tensors\n"
+            "\turl = https://github.com/pen-sotashimozono/tikz-tensors\n")
+        self.sub.mkdir()
+        self.ok("ensure")
+        self.assertEqual(self.version(), sty("0.2.0"))
+        self.assertEqual(self.staged_gitlink()[0], "160000")
+
+    def test_ensure_refuses_a_main_that_is_not_a_release(self):
+        self.origin_commit({"tex/tikz-tensors.sty": sty("0.2.0") + "% unreleased\n"}, "ungated")
+        r = self.script("ensure")
         self.assertNotEqual(r.returncode, 0)
-        self.assertIn("has no LICENSE", r.stderr)
-        self.assert_untouched()
+        self.assertIn("is not a release", r.stderr)
+
+    def test_a_fresh_clone_is_initialised_at_the_recorded_pin(self):
+        self.ok("pin", "v0.1.0")
+        self.git(self.repo, "commit", "-qm", "pin v0.1.0")
+        clone = self.repo.parent / "clone"
+        self.git(self.repo.parent, "clone", "-q", str(self.repo), str(clone))
+        self.assertFalse((clone / ".github/tools/figures/tikz-tensors/tex").exists())
+        self.ok("ensure", repo=clone)
+        self.assertEqual(self.version(clone), sty("0.1.0"), "the recorded pin, not the newest")
+
+    # -- pin ----------------------------------------------------------------
+
+    def test_pin_moves_to_a_release_and_stages_it(self):
+        self.ok("pin", "v0.2.0")
+        before = self.staged_gitlink()[1]
+        self.ok("pin", "v0.1.0")
+        self.assertEqual(self.version(), sty("0.1.0"))
+        self.assertNotEqual(self.staged_gitlink()[1], before)
+
+    def test_pin_refuses_a_missing_tag(self):
+        self.ok("pin", "v0.2.0")
+        r = self.script("pin", "v9.9.9")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("no tag v9.9.9", r.stderr)
+        self.assertEqual(self.version(), sty("0.2.0"))
+
+    def test_pin_refuses_a_tag_whose_version_line_disagrees(self):
+        self.ok("pin", "v0.2.0")
+        r = self.script("pin", "v0.3.0")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("not a release", r.stderr)
+        self.assertEqual(self.version(), sty("0.2.0"))
+
+    # -- developing in place --------------------------------------------------
+
+    def develop(self):
+        """dev branch in the submodule, one commit on it."""
+        self.ok("pin", "latest")
+        self.git(self.repo, "commit", "-qm", "pin")
+        r = self.ok("dev", "fn-size")
+        self.assertIn("my-paper/fn-size", r.stdout)
+        (self.sub / "tex/tikz-tensors.sty").write_text(sty("0.2.0") + "% an edit in place\n")
+        self.git(self.sub, "commit", "-qam", "edit")
+        self.git(self.repo, "add", ".github/tools/figures/tikz-tensors")
+        self.git(self.repo, "commit", "-qm", "build with the proposal")
+
+    def test_status_of_a_release(self):
+        self.ok("pin", "v0.2.0")
+        out = self.ok("status").stdout
+        self.assertIn("release v0.2.0", out)
+        self.assertNotIn("not pushed", out)
+
+    def test_status_of_an_unpushed_proposal(self):
+        self.develop()
+        out = self.ok("status").stdout
+        self.assertIn("(my-paper/fn-size)", out)
+        self.assertIn("proposal, not a release", out)
+        self.assertIn("main: 1 ahead, 0 behind", out)
+        self.assertIn("not pushed", out)
+
+    def test_check_passes_a_release(self):
+        self.ok("pin", "v0.2.0")
+        self.git(self.repo, "commit", "-qm", "pin")
+        out = self.ok("check").stdout
+        self.assertIn("release v0.2.0", out)
+        self.assertTrue(out.rstrip().endswith("OK"), out)
+
+    def test_check_fails_an_unpushed_pin_and_warns_on_a_pushed_proposal(self):
+        self.develop()
+        clone = self.repo.parent / "ci"
+        self.git(self.repo.parent, "clone", "-q", str(self.repo), str(clone))
+        r = self.script("check", repo=clone)
+        self.assertNotEqual(r.returncode, 0, "the pinned commit exists only in the project's submodule")
+        self.assertIn("is not on", r.stdout)
+        self.git(self.sub, "push", "-q", "origin", "my-paper/fn-size")
+        r = self.script("check", repo=clone)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("::warning::", r.stdout)
+        self.assertIn("on my-paper/fn-size", r.stdout)
 
 
 if __name__ == "__main__":
