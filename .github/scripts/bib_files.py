@@ -3,7 +3,7 @@
 
     python3 .github/scripts/bib_files.py [references.bib] [--check]
 
-An entry whose refs/<bibkey>.pdf exists gets `file = {refs/<bibkey>.pdf}`;
+An entry whose papers/<bibkey>.pdf exists gets `file = {papers/<bibkey>.pdf}`;
 one without loses the field. So the bibliography itself says where every
 original is, and a reference manager (JabRef, BibDesk) opens it from there.
 bibtex ignores the field, so the notes are unaffected.
@@ -23,10 +23,10 @@ FILE_LINE = re.compile(r"^  file\s*=\s*\{[^}]*\},?\n", re.M)
 def with_files(text: str, root: pathlib.Path) -> str:
     def fix(m: re.Match) -> str:
         key, body = m.group(1), FILE_LINE.sub("", m.group(2))
-        if (root / "refs" / f"{key}.pdf").is_file():
+        if (root / "papers" / f"{key}.pdf").is_file():
             if body and not body.rstrip("\n").endswith(","):
                 body = body.rstrip("\n") + ",\n"
-            body += f"  file       = {{refs/{key}.pdf}},\n"
+            body += f"  file       = {{papers/{key}.pdf}},\n"
         return m.group(0)[: m.start(2) - m.start(0)] + body + "}"
     return ENTRY.sub(fix, text)
 

@@ -4,7 +4,7 @@
     python3 .github/tools/figures/paper_figures.py <bibkey>              # all figures, from the arXiv source
     python3 .github/tools/figures/paper_figures.py <bibkey> 1 4          # only Figs. 1 and 4
     python3 .github/tools/figures/paper_figures.py <bibkey> crop <N> <page> <x> <y> <w> <h>
-                                                                   # figure N cropped from refs/<bibkey>.pdf
+                                                                   # figure N cropped from papers/<bibkey>.pdf
 
 From the arXiv e-print: the main .tex (with its \\input files inlined) is read
 in order, and figure environments are numbered as the paper numbers them, so
@@ -60,7 +60,7 @@ def arxiv_id(key):
         m = re.search(r'"arxiv":\s*"([^"]+)"', r.stdout)
         if m:
             return m.group(1)
-    sys.exit(f"{key}: no arXiv source; crop from refs/{key}.pdf instead (see --help)")
+    sys.exit(f"{key}: no arXiv source; crop from papers/{key}.pdf instead (see --help)")
 
 
 def with_desc(svg: str, desc: str) -> str:
@@ -167,14 +167,14 @@ def from_arxiv(key, only=()):
 
 
 def crop(key, n, page, x, y, w, h):
-    pdf = ROOT / "refs" / f"{key}.pdf"
+    pdf = ROOT / "papers" / f"{key}.pdf"
     if not pdf.is_file():
         sys.exit(f"no {pdf}")
     OUT.mkdir(parents=True, exist_ok=True)
     dst = OUT / f"{key}-fig{n}.svg"
     subprocess.run(["pdftocairo", "-svg", "-f", page, "-l", page, "-x", x, "-y", y, "-W", w, "-H", h,
                     "-paperw", w, "-paperh", h, str(pdf), str(dst)], check=True)
-    dst.write_text(with_desc(dst.read_text(), f"{key}, Fig. {n}: cropped from refs/{key}.pdf p.{page}"))
+    dst.write_text(with_desc(dst.read_text(), f"{key}, Fig. {n}: cropped from papers/{key}.pdf p.{page}"))
     print(dst.relative_to(ROOT))
 
 

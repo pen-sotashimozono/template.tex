@@ -1,6 +1,6 @@
 ---
 name: paper-figures
-description: Use a cited paper's own figure - extract it from the paper's arXiv source, or crop it from refs/<bibkey>.pdf, into figures/papers/<bibkey>-fig<N>.svg. Use whenever a slide or a note should show a figure from a paper; never redraw a look-alike.
+description: Use a cited paper's own figure - extract it from the paper's arXiv source, or crop it from papers/<bibkey>.pdf, into figures/papers/<bibkey>-fig<N>.svg. Use whenever a slide or a note should show a figure from a paper; never redraw a look-alike.
 ---
 
 # A paper's figure: the original, as SVG
@@ -13,7 +13,7 @@ numbers.
 ```sh
 python3 .github/tools/figures/paper_figures.py <bibkey>                               # every figure, from the arXiv source
 python3 .github/tools/figures/paper_figures.py <bibkey> 1 4                           # only Figs. 1 and 4
-python3 .github/tools/figures/paper_figures.py <bibkey> crop <N> <page> <x> <y> <w> <h>  # from refs/<bibkey>.pdf
+python3 .github/tools/figures/paper_figures.py <bibkey> crop <N> <page> <x> <y> <w> <h>  # from papers/<bibkey>.pdf
 ```
 
 Output is **only SVG**, flat in `figures/papers/`:
@@ -35,12 +35,12 @@ grep -o '<desc>[^<]*' figures/papers/<bibkey>-fig*.svg | cut -c1-200
 1. **arXiv source** (default). The key's `eprint`, or `doiget link <doi>`,
    gives the id. Figures are numbered by the order of the figure environments
    in the main `.tex` (inputs inlined) — the paper's own numbering. Check one
-   against the PDF (`FIG. N.` in `pdftotext refs/<bibkey>.pdf`) the first time.
+   against the PDF (`FIG. N.` in `pdftotext papers/<bibkey>.pdf`) the first time.
    Vector figures (pdf, eps) stay vector; png/jpg are embedded unchanged.
 2. **Crop** (no arXiv source: old or publisher-only papers). Render the page at
    72 dpi, where one pixel is one PDF point, and read off the box:
    ```sh
-   pdftocairo -png -r 72 -f <page> -l <page> refs/<bibkey>.pdf /tmp/p
+   pdftocairo -png -r 72 -f <page> -l <page> papers/<bibkey>.pdf /tmp/p
    ```
    Then `crop <N> <page> <x> <y> <w> <h>` (top-left origin). The result is a
    vector crop of the printed page — look at it before using it.
@@ -55,5 +55,5 @@ grep -o '<desc>[^<]*' figures/papers/<bibkey>-fig*.svg | cut -c1-200
   numbers replaces just those; without numbers, every `-fig*.svg` of the key is
   rewritten. Never edit these files by hand.
 - To find the number first, read the captions in the PDF
-  (`pdftotext refs/<bibkey>.pdf - | grep -A2 'FIG. '`) or extract everything once
+  (`pdftotext papers/<bibkey>.pdf - | grep -A2 'FIG. '`) or extract everything once
   and grep the `<desc>`.

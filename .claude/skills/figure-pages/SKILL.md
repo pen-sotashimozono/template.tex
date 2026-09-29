@@ -29,7 +29,7 @@ one page of each kind; delete it once a real topic exists.
 - **A header comment** saying what the page shows, where its numbers come
   from, and which pages it pairs with (by path).
 - **Numbers from a source** — a calculation in the repository, or a paper
-  checked in `refs/` — never from memory. Recompute a rounded value before
+  checked in `papers/` — never from memory. Recompute a rounded value before
   writing it.
 - **One notation for the whole project.** Decide the symbols once (write them
   into CLAUDE.md) and keep every page to them.

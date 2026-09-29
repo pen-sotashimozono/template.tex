@@ -8,14 +8,14 @@ on:
   pull_request:
     paths:
       - "references.bib"
-      - "refs/*.pdf"
+      - "papers/*.pdf"
       - ".github/scripts/bib_files.py"
       - ".github/workflows/VerifyReferences.yml"
   push:
     branches: [main]
     paths:
       - "references.bib"
-      - "refs/*.pdf"
+      - "papers/*.pdf"
   workflow_dispatch:
 
 permissions:
@@ -27,7 +27,7 @@ jobs:
     with:
       contact-email: souta.shimozono@gmail.com
 
-  # Every entry with refs/<key>.pdf carries file = {refs/<key>.pdf}, and no
+  # Every entry with papers/<key>.pdf carries file = {papers/<key>.pdf}, and no
   # other does. Derived by bib_files.py (refs_sync.sh runs it); this only checks.
   file-fields:
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","rosina"]') || 'ubuntu-latest' }}

@@ -14,7 +14,7 @@ BIB = """% a comment
 
 @article{no2021pdf,
   title      = {Two},
-  file       = {refs/no2021pdf.pdf},
+  file       = {papers/no2021pdf.pdf},
 }
 """
 
@@ -23,15 +23,15 @@ class BibFiles(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = pathlib.Path(self.tmp.name)
-        (self.root / "refs").mkdir()
-        (self.root / "refs" / "has2020pdf.pdf").write_bytes(b"%PDF")
+        (self.root / "papers").mkdir()
+        (self.root / "papers" / "has2020pdf.pdf").write_bytes(b"%PDF")
 
     def tearDown(self):
         self.tmp.cleanup()
 
     def test_adds_and_removes(self):
         out = bib_files.with_files(BIB, self.root)
-        self.assertIn("  file       = {refs/has2020pdf.pdf},\n}", out)
+        self.assertIn("  file       = {papers/has2020pdf.pdf},\n}", out)
         self.assertNotIn("no2021pdf.pdf", out)
         self.assertIn("% a comment", out)
 
