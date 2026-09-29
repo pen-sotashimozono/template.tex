@@ -24,8 +24,10 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","rosina"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
-      - uses: ./.github/actions/libreoffice
+      # LibreOffice installs with apt: GitHub-hosted only; on rosina the soffice tests skip.
+      - if: runner.environment == 'github-hosted'
+        uses: ./.github/actions/libreoffice
       - run: python3 -m unittest discover -s .github/scripts/tests -v

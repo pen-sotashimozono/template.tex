@@ -30,7 +30,7 @@ jobs:
   # Every entry with refs/<key>.pdf carries file = {refs/<key>.pdf}, and no
   # other does. Derived by bib_files.py (refs_sync.sh runs it); this only checks.
   file-fields:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","rosina"]') || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
       - run: python3 .github/scripts/bib_files.py --check
