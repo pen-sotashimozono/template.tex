@@ -36,7 +36,7 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
 | `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py` |
 | `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `paper_figures.py`, and `tikz-tensors/` (the TikZ format and theme, a git submodule pinned by `tikz-tensors.sh`) |
-| `.claude/rules/` | `writing.md`: how the text of `notes/` is written (sentences, mathematics, structure) |
+| `.claude/rules/` | one file per subject (`prose.md`, `mathematics.md`, `structure.md`, `accuracy.md`, `review-notes.md`), all in force unless listed under "Rules not in force" below |
 | `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure) |
 | `out/` | build output (gitignored) |
 
@@ -58,6 +58,21 @@ Before editing either preamble: **revtex4-2 bundles its own `natbib`**, so only
 `notes.tex` loads it. `\affiliation`, `\email` and `acknowledgments` are
 revtex-only, so `notes.tex` reimplements them — that is what lets the same
 markup compile under either class.
+
+## Rules
+
+Every file in `.claude/rules/` is in force by default. To switch one off, name
+it below with one line on why. Rules that hold for this repository only (its
+notation, its running example, which sections to imitate) are also written
+here, not in `.claude`.
+
+### Rules not in force
+
+None.
+
+### Rules of this repository only
+
+None yet.
 
 ## Figures: pages in `figures/src/`, tools in `.github/tools/figures/`
 
