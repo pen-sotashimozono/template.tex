@@ -4,5 +4,5 @@
 	branch = main
 [submodule ".claude"]
 	path = .claude
-	url = https://github.com/pen-sotashimozono/claude-tex
+	url = https://github.com/pen-sotashimozono/.claude
 	branch = main

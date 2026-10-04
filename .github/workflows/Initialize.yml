@@ -3,7 +3,7 @@ name: Initialize from template
 # Runs once in a repository generated from this template, then deletes itself.
 # Resets every document to 0.1.0, clears the template's changelog, removes
 # LICENSE, which covers the template rather than the work written with it,
-# re-pins the tikz-tensors and .claude (claude-tex) submodules, which the copy
+# re-pins the tikz-tensors and .claude submodules, which the copy
 # leaves empty, and deletes SyncTikzTensors.yml, which only the template runs.
 #
 # Guarded twice: is_template is true only in the template repository itself,
@@ -70,11 +70,11 @@ jobs:
           # empty. Pin it afresh at its newest release; this stages both.
           .github/tools/figures/tikz-tensors.sh ensure
 
-          # The same holds for .claude (claude-tex, the shared rules and
+          # The same holds for .claude (the shared rules and
           # skills): add it afresh at its main when the copy left no pin.
           if [ -z "$(git ls-files -s -- .claude | awk '$1 == "160000"')" ]; then
             find .claude -delete 2>/dev/null || true
-            git submodule add --force https://github.com/pen-sotashimozono/claude-tex .claude
+            git submodule add --force https://github.com/pen-sotashimozono/.claude .claude
             git add .gitmodules .claude
           fi
 

@@ -41,14 +41,14 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `out/` | build output (gitignored) |
 
 `.claude` is a git submodule,
-[pen-sotashimozono/claude-tex](https://github.com/pen-sotashimozono/claude-tex),
+[pen-sotashimozono/.claude](https://github.com/pen-sotashimozono/.claude),
 shared by every repository made from the template. A clone without
 `--recurse-submodules` has it empty until `git submodule update --init .claude`.
 To change a rule or a skill, edit inside `.claude`, commit and push **there
 first**, then `git add .claude` here; `git submodule update --remote .claude`
 moves to its newest main. Everything in it is shared, so what belongs to this
 repository only is written in this file. `Initialize.yml` adds it afresh at
-claude-tex's main in a repository made from this template, for the same reason
+its main in a repository made from this template, for the same reason
 as tikz-tensors below.
 
 `latexmk main.tex` → `out/main.pdf`, `latexmk notes.tex` → `out/notes.pdf`. One
