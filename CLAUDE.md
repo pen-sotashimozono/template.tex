@@ -49,7 +49,11 @@ first**, then `git add .claude` here; `git submodule update --remote .claude`
 moves to its newest main. Everything in it is shared, so what belongs to this
 repository only is written in this file. `Initialize.yml` adds it afresh at
 its main in a repository made from this template, for the same reason
-as tikz-tensors below.
+as tikz-tensors below. The template itself follows `.claude`'s main daily
+(`SyncClaude.yml`: move the pin, refuse the move if it emptied `rules/` or
+`skills/`, commit); initialization deletes that workflow, because the rules are
+in force while a project's text is being written and should not move under its
+author. A project therefore pins when it chooses.
 
 `latexmk main.tex` → `out/main.pdf`, `latexmk notes.tex` → `out/notes.pdf`. One
 `.latexmkrc` serves both; the stems differ so nothing collides.
