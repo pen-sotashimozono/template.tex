@@ -4,7 +4,7 @@ name: Initialize from template
 # Resets every document to 0.1.0, clears the template's changelog, removes
 # LICENSE, which covers the template rather than the work written with it,
 # re-pins the tikz-tensors and .claude submodules, which the copy
-# leaves empty, and deletes SyncTikzTensors.yml, which only the template runs.
+# leaves empty, and deletes the two Sync workflows, which only the template runs.
 #
 # Guarded twice: is_template is true only in the template repository itself,
 # and the slug exclusion is a backstop. Self-deletion is the third.
@@ -78,16 +78,19 @@ jobs:
             git add .gitmodules .claude
           fi
 
-          # The daily sync keeps the template itself on tikz-tensors' main; a
-          # project moves when it chooses (tikz-tensors.sh pin), so it goes.
+          # The daily syncs keep the template itself on tikz-tensors' main and
+          # on .claude's. A project moves when it chooses -- tikz-tensors.sh pin
+          # for the one, and for the other because its rules are in force while
+          # its text is written -- so both go.
           rm -f .github/workflows/SyncTikzTensors.yml
+          rm -f .github/workflows/SyncClaude.yml
 
           rm .github/workflows/Initialize.yml
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs.toml .github/CHANGELOG.md LICENSE .github/workflows/Initialize.yml \
-            .github/workflows/SyncTikzTensors.yml
+            .github/workflows/SyncTikzTensors.yml .github/workflows/SyncClaude.yml
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0
