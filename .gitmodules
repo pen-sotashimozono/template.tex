@@ -2,3 +2,7 @@
 	path = .github/tools/figures/tikz-tensors
 	url = https://github.com/pen-sotashimozono/tikz-tensors
 	branch = main
+[submodule ".claude"]
+	path = .claude
+	url = https://github.com/pen-sotashimozono/claude-tex
+	branch = main

@@ -36,8 +36,20 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
 | `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py` |
 | `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `paper_figures.py`, and `tikz-tensors/` (the TikZ format and theme, a git submodule pinned by `tikz-tensors.sh`) |
+| `.claude/rules/` | `writing.md`: how the text of `notes/` is written (sentences, mathematics, structure) |
 | `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure) |
 | `out/` | build output (gitignored) |
+
+`.claude` is a git submodule,
+[pen-sotashimozono/claude-tex](https://github.com/pen-sotashimozono/claude-tex),
+shared by every repository made from the template. A clone without
+`--recurse-submodules` has it empty until `git submodule update --init .claude`.
+To change a rule or a skill, edit inside `.claude`, commit and push **there
+first**, then `git add .claude` here; `git submodule update --remote .claude`
+moves to its newest main. Everything in it is shared, so what belongs to this
+repository only is written in this file. `Initialize.yml` adds it afresh at
+claude-tex's main in a repository made from this template, for the same reason
+as tikz-tensors below.
 
 `latexmk main.tex` → `out/main.pdf`, `latexmk notes.tex` → `out/notes.pdf`. One
 `.latexmkrc` serves both; the stems differ so nothing collides.

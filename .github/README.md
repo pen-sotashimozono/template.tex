@@ -63,7 +63,7 @@ CLAUDE.md  LICENSE          # root-only, see below
 .github/scripts/            # bump.sh, docs.py, closure.py, diff.sh, arxiv_bundle.sh, refs_sync.sh, fetch_sources.sh, bib_files.py
 .github/tools/figures/      # figure build (build.sh, latexmkrc, preamble), tikz-tensors/ (submodule), paper_figures.py
 .github/workflows/          # build, version checks, release, reference verification
-.claude/skills/             # changelog, references (doiget), figure-pages, paper-figures
+.claude/                    # submodule (claude-tex): rules/writing.md; skills changelog, references (doiget), figure-pages, paper-figures
 
 out/                        # build output (gitignored)
 ```
