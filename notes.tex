@@ -11,13 +11,18 @@
 % be read and shipped on its own.
 %
 % ---- Page ---------------------------------------------------------------------
-\usepackage[margin=1in]{geometry}
+% A measure wider than the 1in an article gets by default, since derivations are
+% what this document is for. textwidth 16.1cm, textheight 23.5cm on A4 is the
+% block of SciPost Phys. Lect. Notes; centring is equivalent to shifting with
+% \hoffset/\voffset for a oneside document and does not fight geometry.
+\usepackage[a4paper,textwidth=16.1cm,textheight=23.5cm,centering]{geometry}
 %
 % ---- Mathematics -------------------------------------------------------------
 \usepackage{amsmath}
 \usepackage{amsfonts}
 \usepackage{amssymb}
 \usepackage{bm}
+\usepackage{booktabs}   % \toprule, \midrule, \bottomrule for a table of results
 \usepackage{braket}
 %
 % ---- Bibliography ------------------------------------------------------------
@@ -31,7 +36,18 @@
 %
 % ---- Graphics ----------------------------------------------------------------
 \usepackage{graphicx} % figure (luatex driver, auto-detected under LuaLaTeX)
+\usepackage{float}    % [H], for a figure that must stay where it is written
+\usepackage{afterpage} % defer a float to the next page break, so [t] is the NEXT page's top
 \graphicspath{{figures/}}
+%
+% ---- Reaching a cited paper ---------------------------------------------------
+% \doi becomes a link to doi.org, which is an ordinary /URI action and so opens in
+% any viewer. The .bbl declares \doi with \providecommand, so defining it here
+% wins without touching the style. A link to a local copy under papers/ was tried
+% and removed: hyperref writes it correctly, as /GoToR with a relative path, but
+% the viewer resolves that path on the machine doing the rendering, which over a
+% remote session is not the machine holding the files.
+\newcommand{\doi}[1]{doi:\,\href{https://doi.org/#1}{#1}}
 %
 % ---- Revision markup (comment out before final submission) -------------------
 \usepackage{xcolor}
@@ -41,18 +57,84 @@
 \newcommand{\remove}[1]{\sout{#1}}         % deletion
 \newcommand{\rev}[1]{{\color{red}{#1}}}    % response to reviewer
 %
+% ---- Captions ------------------------------------------------------------------
+\usepackage[font={small}]{caption}
+\usepackage[font={small}]{subcaption}       % two panels side by side
+%
+% ---- Draft marking -------------------------------------------------------------
+% .claude/rules/structure.md asks that new or rewritten text go inside
+% \begin{draft}...\end{draft}, so a document has to provide the environment. It
+% sets its contents in draftcolor, floats and captions included, puts a DRAFT
+% mark in the margin where it starts and a coloured rule where it ends. Only the
+% author removes a draft environment.
+\definecolor{draftcolor}{HTML}{B5179E}
+\newif\ifindraft
+\makeatletter
+\g@addto@macro\@floatboxreset{\ifindraft\color{draftcolor}\fi}
+\makeatother
+\newenvironment{draft}{%
+  \par\marginpar{\color{draftcolor}\footnotesize\bfseries DRAFT\,$\blacktriangledown$}%
+  \indrafttrue\color{draftcolor}%
+  \captionsetup{labelfont={color=draftcolor},textfont={color=draftcolor}}}{%
+  \par\noindent{\color{draftcolor}\rule{\linewidth}{0.6pt}}\par}
+%
+% ---- the lecture-note look ----------------------------------------------------
+\usepackage{microtype}
+\usepackage{fancyhdr}                       % running head: section name left, page right
+\pagestyle{fancy}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancyhf{}
+\fancyhead[L]{\nouppercase{\leftmark}}
+\fancyhead[R]{\thepage}
+\setlength{\headheight}{14.5pt}
+\allowdisplaybreaks[1]
+% A fourth heading level. article stops numbering at subsubsection and sets
+% \paragraph as a run-in head, which .claude/rules/prose.md forbids. Both are
+% changed here, so that a fourth level is a numbered section in its own right and
+% \paragraph moves out of the way. The table of contents still stops at three.
+\makeatletter
+\newcounter{subsubsubsection}[subsubsection]
+\renewcommand\thesubsubsubsection{\thesubsubsection.\arabic{subsubsubsection}}
+\newcommand\subsubsubsection{\@startsection{subsubsubsection}{4}{\z@}%
+  {-3.25ex\@plus -1ex \@minus -.2ex}{1.5ex \@plus .2ex}%
+  {\normalfont\normalsize\bfseries}}
+\newcommand*\l@subsubsubsection{\@dottedtocline{4}{7.0em}{4.1em}}
+\def\toclevel@subsubsubsection{4}
+\newcommand*\subsubsubsectionmark[1]{}
+\renewcommand\paragraph{\@startsection{paragraph}{5}{\z@}%
+  {3.25ex \@plus1ex \@minus.2ex}{-1em}{\normalfont\normalsize\bfseries}}
+\def\toclevel@paragraph{5}
+\setcounter{secnumdepth}{4}
+\makeatother
+% A two-panel figure with its caption is a shade over the 0.3 of a page LaTeX will
+% give to a bottom float, so \begin{figure}[b] silently defers it to the end of the
+% document. Widen the allowance rather than shrink the figure.
+\renewcommand{\bottomfraction}{0.55}
+\renewcommand{\textfraction}{0.1}
+%
 % ---- revtex-only commands, reimplemented --------------------------------------
 % \affiliation, \email and the acknowledgments environment come from revtex4-2.
 % article has none of them, so the same title markup works in both documents.
 \makeatletter
+% One line per item, as revtex sets a title block: author, then each affiliation in
+% italic, then the address in typewriter, then the date. The accumulator starts each
+% entry with \par so that several \affiliation / \email calls stack instead of running
+% together on the author's line; it is guarded against being empty, which would
+% otherwise add a blank paragraph.
 \newcommand{\@affiliations}{}
-\newcommand{\affiliation}[1]{\g@addto@macro\@affiliations{\ \small\itshape #1}}
-\newcommand{\email}[1]{\g@addto@macro\@affiliations{\ \small\texttt{#1}}}
+\newcommand{\affiliation}[1]{\g@addto@macro\@affiliations{\par{\small\itshape #1}}}
+\newcommand{\email}[1]{\g@addto@macro\@affiliations{\par{\small\ttfamily #1}}}
 \renewcommand{\@maketitle}{%
   \begin{center}%
-    {\LARGE\bfseries \@title \par}\vskip 1em%
-    {\large \@author \@affiliations \par}\vskip 1em%
-    {\large \@date \par}%
+    {\LARGE\bfseries \@title \par}%
+    \vskip 1.2em%
+    {\large \@author \par}%
+    \ifx\@affiliations\@empty\else
+      \vskip 0.4em{\@affiliations \par}%
+    \fi
+    \vskip 0.8em%
+    {\small \@date \par}%
   \end{center}\par\vskip 1.5em}
 \makeatother
 \newenvironment{acknowledgments}{\section*{Acknowledgments}}{}
@@ -70,6 +152,10 @@
 \date{\today}
 
 \maketitle
+
+\tableofcontents
+
+\newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%% Notes %%%%%%%%%%%%%%%%%%
@@ -90,6 +176,41 @@ This is a cite example\cite{example2024}: the bibliography is shared with
 
 The revision markup works here as well: \sh{author edit},
 \ch{collaborator edit}, \rev{reviewer response}, \remove{deletion}.
+
+\subsection{Four heading levels}
+\label{sec:notes-levels}
+
+\subsubsection{The third}
+
+\subsubsubsection{The fourth, numbered}
+
+\texttt{article} stops numbering at the third and sets \verb|\paragraph| as a
+run-in head, so the preamble adds \verb|\subsubsubsection| and moves
+\verb|\paragraph| down to a fifth level. The table of contents still stops at
+the third.
+
+\subsection{Text under review}
+\label{sec:notes-draft}
+
+\begin{draft}
+What is inside a \texttt{draft} environment is set in this colour, with a mark
+in the margin where it begins and a rule where it ends, and the colour reaches
+floats and their captions as well. Only the author takes the environment off, so
+what has not been reviewed is visible in the PDF and not only in the diff.
+
+\begin{table}[H]
+  \centering
+  \caption{A table inside a draft block, which is coloured with it.}
+  \begin{tabular}{lr}
+    \toprule
+    quantity & value \\
+    \midrule
+    one      & 1     \\
+    two      & 2     \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+\end{draft}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%% Acknowledgments %%%%%%%%%%%%%%

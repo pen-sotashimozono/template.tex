@@ -23,6 +23,10 @@ those entries are left as written rather than rewritten to match.
 
 <!-- new entries go directly below this line -->
 
+## v0.0.14-notes — 2026-10-04
+
+notes.tex gains the draft environment and a fourth heading level, with the lecture-note look the projects use.
+
 ## v0.0.13-notes — 2026-09-29
 
 The bibliography's comments now point at papers/, where cited works' PDFs live instead of refs/.
