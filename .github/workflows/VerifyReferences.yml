@@ -32,5 +32,5 @@ jobs:
   file-fields:
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","rosina"]') || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: python3 .github/scripts/bib_files.py --check
