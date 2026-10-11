@@ -177,6 +177,17 @@ This is a cite example\cite{example2024}: the bibliography is shared with
 The revision markup works here as well: \sh{author edit},
 \ch{collaborator edit}, \rev{reviewer response}, \remove{deletion}.
 
+\subsection{A figure page}
+\label{sec:notes-figure}
+
+A page under \texttt{figures/src/} is built into \texttt{figures/assets/} and
+included from there. Its SVG is committed and its PDF is not: \texttt{latexmk}
+builds the PDFs that are missing or older than their page before it compiles
+the document.
+\begin{equation}
+  \vcenter{\hbox{\includegraphics{assets/example/03-mps}}}
+\end{equation}
+
 \subsection{Four heading levels}
 \label{sec:notes-levels}
 

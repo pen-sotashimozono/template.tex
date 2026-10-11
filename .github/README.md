@@ -52,7 +52,8 @@ notes.tex                   # working notebook, article
 supplemental.tex            # supplementary material (optional)
 references.bib              # bibliography, from `doiget cite`
 docs.toml                   # root documents and versions — the version authority
-figures/                    # the documents' figures (PDF); src/ figure pages -> assets/ (SVG, PDF);
+figures/                    # the documents' figures (PDF); src/ figure pages -> assets/ (SVG committed,
+                            #   PDF built by latexmk and not committed);
                             #   papers/ cited papers' own figures
 notes/                      # children of notes.tex
 papers/  papers/src/            # one PDF per bibkey; full text for grepping

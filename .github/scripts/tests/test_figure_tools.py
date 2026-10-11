@@ -107,6 +107,81 @@ class BuildScript(unittest.TestCase):
         self.assertTrue((repo.root / "figures/assets/t/a.svg").exists())
 
 
+TEX_STUBS = {
+    # latexmk -r <rc> -outdir=<dir> <page>.tex  ->  <dir>/<page>.pdf
+    "latexmk": '#!/bin/sh\nfor a in "$@"; do case "$a" in -outdir=*) d="${a#-outdir=}";; *.tex) n="$(basename "$a" .tex)";; esac; done\n'
+               'mkdir -p "$d" && printf "%%PDF" > "$d/$n.pdf"\n',
+    "pdfinfo": '#!/bin/sh\necho "Pages: 1"\n',
+    "pdftocairo": '#!/bin/sh\nfor a in "$@"; do last="$a"; done\necho "<svg/>" > "$last"\n',
+}
+
+
+class PdfOnly(unittest.TestCase):
+    """--pdf-only, what the root .latexmkrc runs: the PDFs a checkout lacks, and no committed file."""
+
+    def repo(self):
+        repo = FigureRepo(self)
+        (repo.tools / "tikz-tensors.sh").write_text("#!/bin/sh\n")
+        (repo.tools / "tikz-tensors.sh").chmod(0o755)
+        repo.write("figures/src/t/c.tex", "a page\n")
+        self.bin = tmpdir(self)
+        for name, body in TEX_STUBS.items():
+            (self.bin / name).write_text(body)
+            (self.bin / name).chmod(0o755)
+        return repo
+
+    def build(self, repo, *args):
+        env = dict(os.environ, PATH=f"{self.bin}{os.pathsep}{os.environ['PATH']}")
+        r = subprocess.run(["bash", str(repo.tools / "build.sh"), *args], cwd=tempfile.gettempdir(),
+                           capture_output=True, text=True, env=env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r.stdout.split()
+
+    def test_builds_the_missing_pdf_and_leaves_every_svg_alone(self):
+        repo = self.repo()
+        svg = repo.write("figures/assets/t/c.svg", "committed")
+        repo.age("figures/assets/t/c.svg", -100)          # older than its page, as after a checkout
+        self.assertEqual(self.build(repo, "--pdf-only"), ["figures/assets/t/c.pdf"])
+        self.assertEqual(svg.read_text(), "committed", "a checkout's SVG must not be rewritten")
+        self.assertFalse((repo.root / "figures/assets/t/a.svg").exists(), "Python pages have no PDF")
+        self.assertEqual(self.build(repo, "--pdf-only"), [], "up to date is a no-op")
+
+    def test_a_page_newer_than_its_pdf_is_rebuilt(self):
+        repo = self.repo()
+        self.build(repo, "--pdf-only")
+        repo.age("figures/assets/t/c.pdf", -100)
+        self.assertEqual(self.build(repo, "--pdf-only"), ["figures/assets/t/c.pdf"])
+
+    def test_the_full_build_still_writes_both(self):
+        repo = self.repo()
+        self.assertIn("figures/assets/t/c.svg", self.build(repo, "--pdf"))
+        self.assertTrue((repo.root / "figures/assets/t/c.pdf").is_file())
+
+
+class Closure(unittest.TestCase):
+    """A built figure PDF is not tracked; the closure reads it as the sources it was built from."""
+
+    def test_a_figure_pdf_stands_for_its_page_and_the_shared_files(self):
+        spec = importlib.util.spec_from_file_location("closure", SCRIPTS / "closure.py")
+        import sys
+        sys.path.insert(0, str(SCRIPTS))
+        self.addCleanup(sys.path.remove, str(SCRIPTS))
+        closure = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(closure)
+        tracked = {
+            "figures/src/t/page.tex", ".github/tools/figures/preamble.tex",
+            ".github/tools/figures/notation.tex", ".github/tools/figures/build.sh",
+            ".github/tools/figures/tikz-tensors", "notes.tex",
+        }
+        got = closure.figure_sources("figures/assets/t/page.pdf", tracked)
+        self.assertEqual(got & tracked, {
+            "figures/src/t/page.tex", ".github/tools/figures/preamble.tex",
+            ".github/tools/figures/notation.tex", ".github/tools/figures/tikz-tensors",
+        })
+        self.assertEqual(closure.figure_sources("figures/papers/x-fig1.pdf", tracked), set())
+        self.assertEqual(closure.figure_sources("notes.tex", tracked), set())
+
+
 class PaperFigures(unittest.TestCase):
     def test_root_is_the_repository(self):
         spec = importlib.util.spec_from_file_location("paper_figures", TOOLS / "paper_figures.py")

@@ -73,7 +73,20 @@ tensor diagram) or `<page>.py` (a script that writes the SVG path it is given)
 ```sh
 .github/tools/figures/build.sh               # every page that is out of date
 .github/tools/figures/build.sh --pdf 02-x    # one topic, keeping PDFs for \includegraphics
+.github/tools/figures/build.sh --pdf-only    # only the PDFs that are missing or out of date
 ```
+
+The SVGs are committed and the PDFs are not (`.gitignore`): a PDF is stored
+whole again at every rebuild, and it can always be made from its page. The
+root `.latexmkrc` therefore runs `build.sh --pdf-only` before every build of
+a document. It writes the PDF of each `.tex` page that has none, or whose page
+is newer, and touches no SVG, so a fresh clone, CI and a release build a
+document with `latexmk` alone and never rewrite a committed file. After
+editing a page, run `build.sh --pdf <topic>` yourself: that is what brings the
+SVG up to date, and the SVG is what you commit. `closure.py` reads a built PDF
+in a build record as the page it came from, the shared `.tex` and `.sty` files
+beside `build.sh` and the tikz-tensors pin, so a PR that changes only a figure
+still counts as touching the documents that include it.
 
 `figures/` holds only pages and what they build into; everything that runs
 them sits in `.github/tools/figures/`. A `.tex` page starts `\input{preamble}`

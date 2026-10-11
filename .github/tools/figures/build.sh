@@ -9,6 +9,7 @@
 #   .github/tools/figures/build.sh figures/src/02-h2-problem/02-hamiltonian.tex   # one page
 #   .github/tools/figures/build.sh --force               # rebuild even if up to date
 #   .github/tools/figures/build.sh --pdf                 # keep the PDF of each .tex page too
+#   .github/tools/figures/build.sh --pdf-only            # only the PDFs that are missing or out of date
 #
 # figures/ holds only what a writer looks at: the pages (src/) and what they
 # build into (assets/). Everything that runs them sits here, next to this
@@ -29,6 +30,16 @@
 # that \includegraphics the page (graphicspath {figures/}: assets/<topic>/<name>).
 # The SVG is what slides paste; the PDF is what LaTeX includes.
 #
+# The SVGs are committed and the PDFs are not (.gitignore): a PDF is stored
+# whole again at every rebuild, and it can always be made from its page. So a
+# checkout has no PDF until the pages are built. --pdf-only does that and no
+# more: for each .tex page whose PDF is missing or older than the page, it
+# writes the PDF and leaves the SVG alone, so a fresh clone or a CI runner
+# never rewrites a committed file. Python pages are skipped (they have no
+# PDF), and neither pdftocairo nor pdfinfo is needed. The root .latexmkrc
+# runs it before every build of a document. After editing a page, run the
+# script without --pdf-only (with --pdf) so that the SVG follows.
+#
 # One page per source; a .tex that produces more is an error. LaTeX runs in
 # figures/.build/, which is deleted on exit, so nothing but src/ and assets/
 # remains. An SVG (or PDF) whose source is gone is deleted too, so assets/
@@ -45,11 +56,13 @@ trap 'rm -rf "$BUILD"' EXIT
 
 force=0
 pdf=0
+pdfonly=0
 args=()
 for arg in "$@"; do
   case "$arg" in
     -f|--force) force=1 ;;
     --pdf) pdf=1 ;;
+    --pdf-only) pdf=1; pdfonly=1 ;;
     *) args+=("$arg") ;;
   esac
 done
@@ -80,7 +93,7 @@ SHARED_PY=("$TOOLS"/schematic.py)
 stale() {
   local svg="$1" src="$2" ext="${2##*.}" dep deps
   [ "$force" -eq 1 ] || [ ! -f "$svg" ] || [ "$src" -nt "$svg" ] && return 0
-  [ "$pdf" -eq 1 ] && [ "$ext" = tex ] && [ ! -f "${svg%.svg}.pdf" ] && return 0
+  [ "$pdf" -eq 1 ] && [ "$ext" = tex ] && [ ! -f "${svg%.*}.pdf" ] && return 0
   if [ "$ext" = tex ]; then deps=("$TOOLS"/*.tex "$TOOLS"/*.sty "$TOOLS"/tikz-tensors/tex/*); else deps=("${SHARED_PY[@]}"); fi
   for dep in "${deps[@]}"; do
     [ -f "$dep" ] && [ "$dep" -nt "$svg" ] && return 0
@@ -99,7 +112,13 @@ for src in "${sources[@]}"; do
   topic="$(dirname "$rel")"
   name="${rel##*/}"; name="${name%.*}"
   svg="assets/$topic/$name.svg"
-  stale "$svg" "$src" || continue
+  out="$svg"
+  if [ "$pdfonly" -eq 1 ]; then
+    case "$src" in *.py) continue ;; esac
+    # Measured against the PDF, not the SVG: the SVG of a checkout is not ours to judge.
+    out="assets/$topic/$name.pdf"
+  fi
+  stale "$out" "$src" || continue
   mkdir -p "assets/$topic"
   case "$src" in
     *.tex)
@@ -115,12 +134,16 @@ for src in "${sources[@]}"; do
         grep -A4 '^!\|:[0-9]*:' "$BUILD/$topic/$name.log" >&2 || true
         exit 1
       fi
-      pages="$(pdfinfo "$BUILD/$topic/$name.pdf" | awk '/^Pages:/ {print $2}')"
-      if [ "$pages" -ne 1 ]; then
-        echo "error: $src has $pages pages; split it, one page per source" >&2
-        exit 1
+      # poppler is needed for the SVG. Without it (--pdf-only on a bare TeX
+      # runner) the page count goes unchecked; the writer's own build checked it.
+      if command -v pdfinfo >/dev/null 2>&1; then
+        pages="$(pdfinfo "$BUILD/$topic/$name.pdf" | awk '/^Pages:/ {print $2}')"
+        if [ "$pages" -ne 1 ]; then
+          echo "error: $src has $pages pages; split it, one page per source" >&2
+          exit 1
+        fi
       fi
-      pdftocairo -svg "$BUILD/$topic/$name.pdf" "$svg"
+      [ "$pdfonly" -eq 1 ] || pdftocairo -svg "$BUILD/$topic/$name.pdf" "$svg"
       [ "$pdf" -eq 0 ] || cp "$BUILD/$topic/$name.pdf" "assets/$topic/$name.pdf"
       ;;
     *.py)
@@ -136,7 +159,7 @@ for src in "${sources[@]}"; do
       mv "$BUILD/$topic/$name.svg" "$svg"
       ;;
   esac
-  echo "figures/$svg"
+  echo "figures/$out"
 done
 
 # assets/ mirrors src/: drop an SVG or PDF whose source is gone, then empty topics.
