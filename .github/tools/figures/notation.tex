@@ -1,0 +1,87 @@
+% This project's notation: what the shapes of tikz-tensors stand for in its
+% figures. The package draws shapes and lines and says nothing about what they
+% mean, so the meaning is kept here, next to build.sh, and a page loads it with
+% \input{notation} after \usepackage{tikz-tensors}. It starts as a copy of
+% tikz-tensors' examples/conventions/notation.tex (v0.18.1); change it freely --
+% it belongs to the project, and a new pin of tikz-tensors does not touch it.
+%
+% Read top to bottom, it is the notation:
+%   a function of position is a circle (or capsule) in the electron colour,
+%   and its continuous argument a wavy leg in the same colour;
+%   an array of numbers is a circle in the array colour -- a capsule, which is
+%   a circle at one site's size and stretches to the sites it spans -- an
+%   operator a plain rounded box -- no tensor is a square: a square
+%   says nothing a circle does not, and turned on a lattice it reads as a
+%   diamond;
+%   left- and right-canonical tensors are triangles pointing the way the gauge
+%   runs, each in its own colour, and the orthogonality center a green
+%   diamond -- small when it sits on a bond; the gauge is said as the way
+%   their bonds run (tn flux): into a canonical tensor from the far end of
+%   the chain and out toward the center, and into the center from both
+%   sides, so that an arrow on a bond (gauge) points toward the center;
+%   an operator tensor on a chain is a neutral rounded box, a gate a light
+%   yellow one, an environment block light purple;
+%   a finite index is a plain line, and one whose direction is part of what is
+%   being said -- which way the gauge runs -- carries an arrowhead;
+%   two indices fused into one (a bond of dimension D times chi) are a double
+%   line; a copy tensor, diagonal in all its indices, is an ink dot; a basis
+%   vector closing an index is a small circle;
+%   an isometry of a tree or a MERA is a triangle pointing up, toward the
+%   root, in the left-canonical colour: off a chain there is no left and
+%   right, only toward the center and away from it, and that is the colour
+%   that already says `isometric toward the center'; both it and a MERA's
+%   disentangler (a gate, flatter) are drawn flat, as a tree's tensors are;
+%   the environment of a two-dimensional network, contracted from its
+%   boundary, is the environment's colour: a corner as a rounded box, a side
+%   as a circle;
+%   in the tensor renormalization group, the tensor of the coarser lattice
+%   is the array's shape a step paler, and the four halves a split leaves
+%   are four tensors, so four colours: the two factors of one decomposition
+%   two steps of one hue (warm for the halves above and below, green for
+%   those to the left and right), the first factor the stronger -- one
+%   colour, one tensor;
+%   in a quantum circuit, a gate on one qubit is a gate, and a controlled NOT
+%   is its control, an ink dot, joined to its target, a circled plus.
+% The colours are the theme's (theme/tokens.toml). Shape carries the meaning
+% on its own and colour repeats it, so a figure survives being printed in grey.
+\tikzset{
+  frame/.style      = {tn frame},
+  tn gate/.append style = {fill=gate!25},
+  tn env/.append style  = {fill=env!25},
+  cont/.style       = {tn wavy, draw=ele},
+  disc/.style       = {tn edge},
+  gauge/.style      = {tn arrow},
+  leg/.style        = {tn label},
+  fused/.style      = {tn double},
+  half1/.style      = {tn fill=warm2},
+  half2/.style      = {tn fill=green2},
+  half3/.style      = {tn fill=warm1},
+  half4/.style      = {tn fill=green1}
+}
+% The tensors of the notation are types (\tntype): a tensor drawn in one says
+% which, in \tnshow and in an error.
+\tntype{fn}          {tn circle, draw=ele, fill=ele!12}
+\tntype{fnwide}      {tn capsule, tn wide, draw=ele, fill=ele!12}
+\tntype{fntall}      {tn capsule, tn tall, draw=ele, fill=ele!12}
+\tntype{coef}        {tn capsule, tn fill=coef}
+\tntype{coefwide}    {tn capsule, tn wide, tn fill=coef}
+\tntype{coeftall}    {tn capsule, tn tall, tn fill=coef}
+\tntype{op}          {tn rounded}
+\tntype{opwide}      {op, tn wide}
+\tntype{canl}        {tn triangle right, tn fill=canl, tn flux={left=in, right=out}}
+\tntype{canr}        {tn triangle left, tn fill=canr, tn flux={right=in, left=out}}
+\tntype{center}      {tn diamond, tn fill=center, tn flux={left=in, right=in}}
+\tntype{centerbond}  {center, font=\scriptsize}
+\tntype{mpo}         {tn rounded, tn fill=mpo}
+\tntype{gate}        {tn gate}
+\tntype{delta}       {tn dot}
+\tntype{basis}       {tn circle, tn small}
+\tntype{iso}         {tn triangle up, tn flat, tn fill=canl}
+\tntype{disentangler}{gate, tn flat}
+\tntype{isodown}     {tn triangle down, tn flat, tn fill=canl}
+\tntype{corner}      {tn rounded, fill=env!25}
+\tntype{side}        {tn circle, fill=env!25}
+\tntype{coarse}      {tn capsule, tn fill=blue2}
+\tntype{ctrl}        {tn dot}
+\tntype{targ}        {tn oplus}
+

@@ -98,7 +98,8 @@ stale() {
   local svg="$1" src="$2" ext="${2##*.}" dep deps
   [ "$force" -eq 1 ] || [ ! -f "$svg" ] || [ "$src" -nt "$svg" ] && return 0
   [ "$pdf" -eq 1 ] && [ "$ext" = tex ] && [ ! -f "${svg%.*}.pdf" ] && return 0
-  if [ "$ext" = tex ]; then deps=("$TOOLS"/*.tex "$TOOLS"/*.sty "$TOOLS"/tikz-tensors/tex/*); else deps=("${SHARED_PY[@]}"); fi
+  # tikz-tensors keeps its files in folders below tex/ (since v0.10.0), hence the two depths.
+  if [ "$ext" = tex ]; then deps=("$TOOLS"/*.tex "$TOOLS"/*.sty "$TOOLS"/tikz-tensors/tex/* "$TOOLS"/tikz-tensors/tex/*/*); else deps=("${SHARED_PY[@]}"); fi
   for dep in "${deps[@]}"; do
     [ -f "$dep" ] && [ "$dep" -nt "$svg" ] && return 0
   done
@@ -124,10 +125,11 @@ build_page() {
     *.tex)
       # The trailing ':' keeps TeX's default search path after the shared files.
       # Only tikz-tensors/tex, not the whole submodule: its tests and examples
-      # hold .tex files a page must never pick up by name.
+      # hold .tex files a page must never pick up by name. The '//' searches
+      # the folders below tex/, where tikz-tensors keeps its parts.
       # A fixed date makes the PDF (and its /ID) the same bytes on every build,
       # so a rebuilt page that did not change shows no diff.
-      if ! TEXINPUTS="$TOOLS:$TOOLS/tikz-tensors/tex:${TEXINPUTS:-}" SOURCE_DATE_EPOCH=0 FORCE_SOURCE_DATE=1 \
+      if ! TEXINPUTS="$TOOLS:$TOOLS/tikz-tensors/tex//:${TEXINPUTS:-}" SOURCE_DATE_EPOCH=0 FORCE_SOURCE_DATE=1 \
           latexmk -r "$TOOLS/latexmkrc" -outdir="$BUILD/$topic" "$src" >/dev/null 2>&1; then
         echo "error: $src failed:" >&2
         grep -A4 '^!\|:[0-9]*:' "$BUILD/$topic/$name.log" >&2 || true
