@@ -18,6 +18,13 @@ Two records are needed and both are load-bearing:
 Only files git tracks survive the filter, so TeX Live paths and build products
 under out/ drop out on their own.
 
+One build product is read through to its sources. The PDF of a figure page,
+figures/assets/<topic>/<page>.pdf, is built and not committed, so the record
+names a file git does not know. It stands for the page it was built from,
+figures/src/<topic>/<page>.tex, and for what every page reads: the shared
+.tex and .sty files beside build.sh and the pin of tikz-tensors. Without
+this a PR that changes only a figure would count as touching no document.
+
 Usage:
     python .github/scripts/closure.py docs                  # document ids
     python .github/scripts/closure.py list [DOC]            # closure, one path per line
@@ -34,6 +41,7 @@ from __future__ import annotations
 import argparse
 import os
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -111,6 +119,25 @@ def to_repo_path(base: pathlib.Path, raw: str) -> str | None:
     return pathlib.PurePath(path[len(root) + 1:]).as_posix()
 
 
+FIGURE_TOOLS = ".github/tools/figures"
+FIGURE_PDF = re.compile(r"figures/assets/(.+)\.pdf")
+
+
+def figure_sources(path: str, tracked: set[str]) -> set[str]:
+    """What the built PDF of a figure page stands for; empty for any other path."""
+    match = FIGURE_PDF.fullmatch(path)
+    if not match:
+        return set()
+    shared = {
+        f for f in tracked
+        if f.startswith(FIGURE_TOOLS + "/")
+        and "/" not in f[len(FIGURE_TOOLS) + 1:]
+        and f.endswith((".tex", ".sty"))
+    }
+    # The submodule is one entry in the index: its pin.
+    return {f"figures/src/{match[1]}.tex", f"{FIGURE_TOOLS}/tikz-tensors"} | shared
+
+
 def closure(doc_id: str, doc: dict, tracked: set[str]) -> set[str]:
     root = root_of(doc_id, {doc_id: doc})
     stem = pathlib.Path(root).stem
@@ -128,7 +155,10 @@ def closure(doc_id: str, doc: dict, tracked: set[str]) -> set[str]:
     if fdb.exists():
         raw += fdb_sources(fdb)
 
-    found = {p for p in (to_repo_path(b, r) for b, r in raw) if p and p in tracked}
+    paths = {p for p in (to_repo_path(b, r) for b, r in raw) if p}
+    for path in list(paths):
+        paths |= figure_sources(path, tracked)
+    found = paths & tracked
     if root in tracked:
         found.add(root)
     return found

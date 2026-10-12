@@ -23,6 +23,10 @@ those entries are left as written rather than rewritten to match.
 
 <!-- new entries go directly below this line -->
 
+## v0.0.15-notes — 2026-10-11
+
+The PDFs of figure pages are built by latexmk before a document is compiled and are no longer committed; the notes include an example page.
+
 ## v0.0.14-notes — 2026-10-04
 
 notes.tex gains the draft environment and a fourth heading level, with the lecture-note look the projects use.
