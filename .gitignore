@@ -38,13 +38,17 @@ __pycache__/
 *.xdv
 _minted*/
 
-# figures/ は PDF で管理するため除外しない
+# figures/ は PDF で管理するため除外しない。置き場所で種類が分かれる:
+#   src/        ページの source (自分で書く)
+#   generated/  src/ から build.sh が作ったもの (手で編集しない、消しても作り直せる)
+#   assets/     自分で個別に作った図 (原本)
+#   papers/     引用論文から取り出した図
 !figures/
 !figures/**
 
-# figures/assets/ の PDF は figures/src/ のページから作るので管理しない (SVG は管理する)。
+# figures/generated/ の PDF は figures/src/ のページから作るので管理しない (SVG は管理する)。
 # latexmk が .latexmkrc から build.sh --pdf-only を呼んで、無いものと古いものを作る
-/figures/assets/**/*.pdf
+/figures/generated/**/*.pdf
 
 # ただし .github/tools/figures/build.sh の中間生成物は除外する。上の打ち消しより後に置くこと
 # (build.sh は終了時に消すが、途中で止めると残る)

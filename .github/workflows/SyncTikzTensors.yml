@@ -83,6 +83,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .github/tools/figures/tikz-tensors figures/assets
+          git add .github/tools/figures/tikz-tensors figures/generated
           git commit -m "chore: tikz-tensors $TAG (daily sync with its main)"
           git push origin HEAD:main

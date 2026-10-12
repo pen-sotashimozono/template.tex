@@ -23,6 +23,10 @@ those entries are left as written rather than rewritten to match.
 
 <!-- new entries go directly below this line -->
 
+## v0.0.16-notes — 2026-10-12
+
+Child files of a document are kept in src/<document id>/ (src/notes/, src/main/), no longer in notes/. What build.sh makes of the figure pages is in figures/generated/, and figures/assets/ now holds figures made by hand.
+
 ## v0.0.15-notes — 2026-10-11
 
 The PDFs of figure pages are built by latexmk before a document is compiled and are no longer committed; the notes include an example page.
