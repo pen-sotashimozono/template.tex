@@ -180,12 +180,12 @@ The revision markup works here as well: \sh{author edit},
 \subsection{A figure page}
 \label{sec:notes-figure}
 
-A page under \texttt{figures/src/} is built into \texttt{figures/assets/} and
+A page under \texttt{figures/src/} is built into \texttt{figures/generated/} and
 included from there. Its SVG is committed and its PDF is not: \texttt{latexmk}
 builds the PDFs that are missing or older than their page before it compiles
 the document.
 \begin{equation}
-  \vcenter{\hbox{\includegraphics{assets/example/03-mps}}}
+  \vcenter{\hbox{\includegraphics{generated/example/03-mps}}}
 \end{equation}
 
 \subsection{Four heading levels}

@@ -25,7 +25,7 @@ those entries are left as written rather than rewritten to match.
 
 ## v0.0.16-notes — 2026-10-12
 
-Child files of a document are kept in src/<document id>/ (src/notes/, src/main/), no longer in notes/.
+Child files of a document are kept in src/<document id>/ (src/notes/, src/main/), no longer in notes/. What build.sh makes of the figure pages is in figures/generated/, and figures/assets/ now holds figures made by hand.
 
 ## v0.0.15-notes — 2026-10-11
 

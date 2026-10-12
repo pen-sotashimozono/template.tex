@@ -30,7 +30,7 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `references.bib` | bibliography — from `doiget cite`, never hand-written |
 | `docs.toml` | root documents and versions — the version authority |
 | `papers/`, `papers/src/` | one PDF per bibkey; full text for grepping |
-| `figures/` | the documents' own figures (PDF) at the top; figure pages in `src/<topic>/`, built into `assets/<topic>/` (SVG, and PDF with `--pdf`); cited papers' own figures as `papers/<bibkey>-fig<N>.svg` — see below |
+| `figures/` | four kinds, told apart by directory: `src/<topic>/` figure pages you write; `generated/<topic>/` what `build.sh` makes of them (SVG committed, PDF built and not committed) — never edited by hand, and remade if deleted; `assets/` figures made one by one outside the page build (a plot exported from elsewhere, a photograph), committed as the originals they are; `papers/<bibkey>-fig<N>.svg` cited papers' own figures — see below |
 | `src/notes/`, `src/main/` | children of `notes.tex` and of `main.tex`: `src/<document id>/`, one directory per document |
 | `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
@@ -83,7 +83,7 @@ None yet.
 A figure you make is a **page**, one output per source:
 `figures/src/<topic>/<page>.tex` (standalone LaTeX: an equation, or a TikZ
 tensor diagram) or `<page>.py` (a script that writes the SVG path it is given)
-→ `figures/assets/<topic>/<page>.svg`, and `.pdf` for LaTeX pages with `--pdf`.
+→ `figures/generated/<topic>/<page>.svg`, and `.pdf` for LaTeX pages with `--pdf`.
 
 ```sh
 .github/tools/figures/build.sh               # every page that is out of date
@@ -149,9 +149,11 @@ Pictures are TikZ (a project's own parts go in a `.sty` next to build.sh);
 through TEXINPUTS and passes
 its own `latexmkrc` with `-r`, so a page never names that directory, and the
 root `.latexmkrc` never applies to pages. A document includes a page as
-`\includegraphics{assets/<topic>/<page>}` (graphicspath `figures/`); the arXiv
+`\includegraphics{generated/<topic>/<page>}` (graphicspath `figures/`); the arXiv
 bundle keeps paths below `figures/`, so that still resolves there.
-`assets/` mirrors `src/`: an output whose source is gone is deleted.
+`generated/` mirrors `src/`: an output whose source is gone is deleted. A figure
+made by hand goes in `figures/assets/` and is included as
+`\includegraphics{assets/<name>}`; `build.sh` never reads or writes there.
 The **`figure-pages`** skill carries the rules (formula only, one line per
 page, numbers from a source, look before reporting).
 
