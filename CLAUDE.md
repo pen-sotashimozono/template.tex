@@ -39,11 +39,12 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `src/notes/`, `src/main/` | children of `notes.tex` and of `main.tex`: `src/<document id>/`, one directory per document |
 | `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
-| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py`, `rename_releases.py` |
+| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py`, `rename_releases.py`, `release_log.py` |
 | `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `notation.tex` (what the shapes of a tensor diagram stand for here), `paper_figures.py`, and `tikz-tensors/` (the TikZ format and theme, a git submodule pinned by `tikz-tensors.sh`) |
 | `.claude/rules/` | one file per subject, listed in `.claude/README.md`; all in force unless listed under "Rules not in force" below |
-| `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure), `cold-read` (a reader who did not write the passage, before the author sees it) |
+| `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure), `cold-read` (a reader who did not write the passage, before the author sees it), `release-log` (bring released versions to this machine and say how they changed) |
 | `out/` | build output (gitignored) |
+| `log/` | released PDFs and their diffs, fetched by `release_log.py` with a page of what changed (gitignored; a copy of what the releases hold) |
 
 `.claude` is a git submodule,
 [pen-sotashimozono/.claude](https://github.com/pen-sotashimozono/.claude),
@@ -200,6 +201,14 @@ Two checks, split on purpose:
 The first is a subset, kept separate because it answers in seconds and still
 runs when a build fails — when the second cannot run at all. Neither is a
 required check; the merge button is the gate.
+
+Released versions are read from `log/`, not from GitHub one page at a time:
+
+```sh
+python3 .github/scripts/release_log.py notes            # the last three versions: PDF and diff into log/notes/
+python3 .github/scripts/release_log.py notes --all      # every version
+python3 .github/scripts/release_log.py notes --list     # log/notes/index.md only: version, date, pages, the changelog's line
+```
 
 A PR touching no document needs no bump and ships no release. One that bumps a
 document releases it on merge: `{tag}.pdf`, `diff-{tag}.pdf` (against that

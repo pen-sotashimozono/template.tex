@@ -1,6 +1,9 @@
 # Build output
 /out/
 
+# Released PDFs fetched by .github/scripts/release_log.py: a copy of what the releases hold
+/log/
+
 # Python bytecode from scripts/
 __pycache__/
 
