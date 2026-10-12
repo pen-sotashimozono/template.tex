@@ -82,8 +82,22 @@ fi
 
 mkdir -p out
 NAME="diff-${FROM}..${LABEL}"
-latexdiff "$WORK/from.tex" "$WORK/to.tex" > "out/${NAME}.tex"
-latexmk -lualatex -interaction=nonstopmode -outdir=out "out/${NAME}.tex" >/dev/null 2>&1 || true
+# A changed equation is set as a whole, the old one deleted and the new one
+# added: marking changes term by term breaks alignments.
+latexdiff --math-markup=whole "$WORK/from.tex" "$WORK/to.tex" > "$WORK/diff.tex"
+# A deleted equation keeps its \label in a starred environment, which amsmath
+# refuses. Inside deleted text \label does nothing; the wrapper is robust, so
+# that a changed heading still goes into the table of contents.
+printf '%s\n' '\makeatletter\let\DIFdelwithlabels\DIFdel\DeclareRobustCommand{\DIFdel}[1]{\begingroup\let\label\@gobble\DIFdelwithlabels{#1}\endgroup}\makeatother' > "$WORK/difflabels.tex"
+sed 's/^\\begin{document}/\\input{difflabels}\\begin{document}/' "$WORK/diff.tex" > "out/${NAME}.tex"
+# A deleted passage keeps its \includegraphics, and a figure that only the
+# from-revision has is not in the working tree. Its worktree is searched after
+# the current directory, so that nothing is copied into the repository. With
+# a to-revision, its worktree comes first of the two.
+SEARCH="$WORK:$WORK/from:"
+[ -z "$TO" ] || SEARCH="$WORK:$WORK/to:$WORK/from:"
+TEXINPUTS=".:$SEARCH${TEXINPUTS:-}" \
+  latexmk -lualatex -interaction=nonstopmode -outdir=out "out/${NAME}.tex" >/dev/null 2>&1 || true
 
 if [ -f "out/${NAME}.pdf" ]; then
   echo "out/${NAME}.pdf"
