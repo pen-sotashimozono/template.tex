@@ -35,7 +35,7 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
 | `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py` |
-| `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `paper_figures.py`, and `tikz-tensors/` (the TikZ format and theme, a git submodule pinned by `tikz-tensors.sh`) |
+| `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `notation.tex` (what the shapes of a tensor diagram stand for here), `paper_figures.py`, and `tikz-tensors/` (the TikZ format and theme, a git submodule pinned by `tikz-tensors.sh`) |
 | `.claude/rules/` | one file per subject, listed in `.claude/README.md`; all in force unless listed under "Rules not in force" below |
 | `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure), `cold-read` (a reader who did not write the passage, before the author sees it) |
 | `out/` | build output (gitignored) |
@@ -49,7 +49,7 @@ first**, then `git add .claude` here; `git submodule update --remote .claude`
 moves to its newest main. Everything in it is shared, so what belongs to this
 repository only is written in this file. `Initialize.yml` adds it afresh at
 its main in a repository made from this template, for the same reason
-as tikz-tensors below. The template itself follows `.claude`'s main daily
+as tikz-tensors below. The template itself follows `.claude`'s main every four hours
 (`SyncClaude.yml`: move the pin, refuse the move if it emptied `rules/` or
 `skills/`, commit); initialization deletes that workflow, because the rules are
 in force while a project's text is being written and should not move under its
@@ -117,10 +117,12 @@ builds none; with nothing to restore, the job builds them through
 
 `figures/` holds only pages and what they build into; everything that runs
 them sits in `.github/tools/figures/`. A `.tex` page starts `\input{preamble}`
-and a tensor diagram adds `\usepackage{tikz-tensors}`
-([pen-sotashimozono/tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors): wavy legs for continuous arguments, plain lines for finite indices,
-circles for functions, squares for coefficient arrays; `\tnswap`; the shared
-theme's colours). It is a git submodule at `.github/tools/figures/tikz-tensors/`.
+and a tensor diagram adds `\usepackage{tikz-tensors}` and `\input{notation}`
+([pen-sotashimozono/tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors) draws shapes, lines and layouts —
+`\tnstack`, `\tnlayer`, `\tnconnect`, `\tnopen` — in the shared theme's colours, and says nothing
+about what a shape means; `notation.tex`, next to `build.sh`, is this project's
+own file of what they stand for: `fn` a function on `cont` wavy legs, `coef` an
+array, `op` an operator, and so on). It is a git submodule at `.github/tools/figures/tikz-tensors/`.
 **Its `main` is the one canonical tikz-tensors, always a release** (gated in
 that repository: PRs only, version checked, released on merge). Here it is
 either pinned at a release, or developed in place on a branch named after this
@@ -147,7 +149,7 @@ without `--recurse-submodules`), and `Initialize.yml` pins it at tikz-tensors'
 main in a repository made from this template, because "Use this template"
 copies `.gitmodules` but not the pinned commit. Once fetched, figures build
 offline. The template repository itself follows tikz-tensors'
-main daily (`SyncTikzTensors.yml`: pin, rebuild the example figures, commit);
+main every four hours (`SyncTikzTensors.yml`: pin, rebuild the example figures, commit);
 initialization deletes that workflow, so a project moves only when it pins.
 Pictures are TikZ (a project's own parts go in a `.sty` next to build.sh);
 `.py` pages are for computed plots. build.sh finds the shared files

@@ -89,7 +89,7 @@ jobs:
           : > figures/generated/.gitkeep
           git add figures/generated
 
-          # The daily syncs keep the template itself on tikz-tensors' main and
+          # The syncs, every four hours, keep the template itself on tikz-tensors' main and
           # on .claude's. A project moves when it chooses -- tikz-tensors.sh pin
           # for the one, and for the other because its rules are in force while
           # its text is written -- so both go.
