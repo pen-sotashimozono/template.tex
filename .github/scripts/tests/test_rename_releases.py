@@ -48,6 +48,92 @@ class Plan(unittest.TestCase):
         self.assertEqual(rename.plan("absent", "lecture", TAGS, RELEASES), [])
 
 
+class Detect(unittest.TestCase):
+    """Which change of docs.toml is a rename: only one the files bear out."""
+
+    BEFORE = {"main": "main.tex", "notes": "notes.tex", "talk": "slides/talk.pptx"}
+
+    def test_a_table_renamed_with_its_file(self):
+        after = {"main": "main.tex", "lecture": "lecture.tex", "talk": "slides/talk.pptx"}
+        self.assertEqual(rename.detect(self.BEFORE, after, {"notes.tex": "lecture.tex"}), {"notes": "lecture"})
+
+    def test_a_table_renamed_over_the_same_file(self):
+        after = {"main": "main.tex", "lecture": "notes.tex", "talk": "slides/talk.pptx"}
+        self.assertEqual(rename.detect(self.BEFORE, after, {}), {"notes": "lecture"})
+
+    def test_an_export_and_a_document_renamed_at_once(self):
+        after = {"main": "main.tex", "lecture": "lecture.tex", "seminar": "slides/seminar.pptx"}
+        moved = {"notes.tex": "lecture.tex", "slides/talk.pptx": "slides/seminar.pptx"}
+        self.assertEqual(rename.detect(self.BEFORE, after, moved), {"notes": "lecture", "talk": "seminar"})
+
+    def test_two_documents_that_trade_ids(self):
+        # The files traded contents (git, with --break-rewrites, reports both as renamed) ...
+        moved = {"main.tex": "notes.tex", "notes.tex": "main.tex"}
+        self.assertEqual(rename.detect(self.BEFORE, self.BEFORE, moved), {"main": "notes", "notes": "main"})
+        # ... or the tables traded their `root`.
+        before = {"main": "paper.tex", "notes": "book.tex"}
+        after = {"main": "book.tex", "notes": "paper.tex"}
+        self.assertEqual(rename.detect(before, after, {}), {"main": "notes", "notes": "main"})
+
+    def test_three_documents_in_a_ring(self):
+        before = {"a": "a.tex", "b": "b.tex", "c": "c.tex"}
+        moved = {"a.tex": "b.tex", "b.tex": "c.tex", "c.tex": "a.tex"}
+        self.assertEqual(rename.detect(before, before, moved), {"a": "b", "b": "c", "c": "a"})
+
+    def test_one_removed_and_another_added_is_not_a_rename(self):
+        after = {"main": "main.tex", "thesis": "thesis.tex", "talk": "slides/talk.pptx"}
+        self.assertEqual(rename.detect(self.BEFORE, after, {}), {})
+        self.assertEqual(rename.detect(self.BEFORE, after, {"old.tex": "thesis.tex"}), {})
+
+    def test_a_bump_or_a_new_document_is_nothing(self):
+        self.assertEqual(rename.detect(self.BEFORE, dict(self.BEFORE, thesis="thesis.tex"), {}), {})
+        self.assertEqual(rename.detect(self.BEFORE, self.BEFORE, {"a.tex": "b.tex"}), {})
+
+    def test_what_does_not_hold_together_moves_nothing(self):
+        # A root rewritten so far that git pairs it with a new document's: main keeps its table.
+        after = dict(self.BEFORE, thesis="thesis.tex")
+        self.assertEqual(rename.detect(self.BEFORE, after, {"main.tex": "thesis.tex"}), {})
+        # One file's worth of history cannot go to an id whose document stays.
+        after = {"main": "main.tex", "talk": "slides/talk.pptx"}
+        self.assertEqual(rename.detect(self.BEFORE, after, {"notes.tex": "main.tex"}), {})
+        # Two documents cannot become one.
+        before = {"a": "a.tex", "b": "b.tex"}
+        self.assertEqual(rename.detect(before, {"c": "a.tex"}, {"b.tex": "a.tex"}), {})
+
+    def test_the_file_of_a_table(self):
+        manifest = '[main]\nversion = "0.1.0"\n[notes]\nroot = "n/root.tex"\nversion = "0.1.0"\n[talk]\nsource = "s/t.pptx"\nversion = "0.1.0"\n[settings]\nstrict = "false"\n'
+        self.assertEqual(rename.files(manifest), {"main": "main.tex", "notes": "n/root.tex", "talk": "s/t.pptx"})
+
+
+class Order(unittest.TestCase):
+    """The renames in an order that never lands on tags still in use."""
+
+    def replay(self, pairs):
+        ids = {doc_id: doc_id for doc_id in set(pairs) | set(pairs.values())}   # id -> the document now under it
+        ids = {doc_id: doc_id for doc_id in pairs}
+        for old, new in rename.order(pairs):
+            self.assertNotIn(new, ids, f"{old} -> {new} lands on a document that has not moved yet")
+            ids[new] = ids.pop(old)
+        return ids
+
+    def test_a_plain_rename_is_one_step(self):
+        self.assertEqual(rename.order({"notes": "lecture"}), [("notes", "lecture")])
+
+    def test_a_chain_goes_from_its_free_end(self):
+        self.assertEqual(rename.order({"a": "b", "b": "c"}), [("b", "c"), ("a", "b")])
+
+    def test_a_swap_goes_through_an_id_of_its_own(self):
+        steps = rename.order({"main": "notes", "notes": "main"})
+        self.assertEqual(steps, [("main", "renaming_main"), ("notes", "main"), ("renaming_main", "notes")])
+        self.assertEqual(self.replay({"main": "notes", "notes": "main"}), {"notes": "main", "main": "notes"})
+
+    def test_a_ring_of_three_ends_where_it_should(self):
+        pairs = {"a": "b", "b": "c", "c": "a"}
+        self.assertEqual(self.replay(pairs), {"b": "a", "c": "b", "a": "c"})
+        for step in rename.order(pairs):
+            self.assertTrue(rename.ID.fullmatch(step[1]), "a temporary id is still an id")
+
+
 class Changelog(unittest.TestCase):
     def test_headings_of_that_id_only(self):
         text = ("## v0.1.1-notes — 2026-01-02\n\nSee v0.1.0-notes for the rest.\n\n## v0.1.0-notes_old\n\n"
