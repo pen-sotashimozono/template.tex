@@ -171,9 +171,12 @@ def renamed_since(rev: str) -> list[tuple[str, str]]:
     before = files(run("git", "show", f"{rev}:docs.toml", capture=True))
     after = files((ROOT / "docs.toml").read_text())
     # --break-rewrites: two files that traded contents both exist before and
-    # after, and git calls that two edits unless told to look at them as
-    # deleted and added.
-    status = run("git", "diff", "--break-rewrites", "--find-renames", "--name-status", "--diff-filter=R",
+    # after, and git calls that two edits unless told to look at each as one
+    # file deleted and another added. Its default only does so for a file
+    # changed beyond recognition, which a short root replaced by a long one
+    # that shares its preamble is not; /1% takes every changed file apart, and
+    # the halves that match nothing better come back together as an edit.
+    status = run("git", "diff", "--break-rewrites=50%/1%", "--find-renames", "--name-status", "--diff-filter=R",
                  rev, "HEAD", capture=True)
     moved = {line.split("\t")[1]: line.split("\t")[2] for line in status.splitlines() if line}
     return order(detect(before, after, moved))
