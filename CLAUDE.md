@@ -34,7 +34,7 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `src/notes/`, `src/main/` | children of `notes.tex` and of `main.tex`: `src/<document id>/`, one directory per document |
 | `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
-| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py` |
+| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py`, `rename_releases.py` |
 | `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `notation.tex` (what the shapes of a tensor diagram stand for here), `paper_figures.py`, and `tikz-tensors/` (the TikZ format and theme, a git submodule pinned by `tikz-tensors.sh`) |
 | `.claude/rules/` | one file per subject, listed in `.claude/README.md`; all in force unless listed under "Rules not in force" below |
 | `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure), `cold-read` (a reader who did not write the passage, before the author sees it) |
@@ -205,6 +205,20 @@ Comparison is against the **current tip of `main`**. When two PRs touch the
 base-branch update alone does not re-trigger checks), resolve the
 `docs.toml` conflict by keeping your higher value, and re-bump. PRs on
 different documents do not collide.
+
+A document's id is in its tags (`v<version>-<id>`), in the titles of its
+releases and in the names of the files attached to them. After renaming a
+table in `docs.toml`, the document looks new and its next release has no
+previous tag to diff against. `rename_releases.py` moves the history to the
+new id: every tag, release, attached file and CHANGELOG heading.
+
+```sh
+python3 .github/scripts/rename_releases.py notes lecture            # what would change
+python3 .github/scripts/rename_releases.py notes lecture --apply    # change it
+```
+
+The old tags are deleted and GitHub does not redirect them, so a link to an
+old release stops working.
 
 ## The submission bundle must compile alone
 
