@@ -50,9 +50,13 @@ set -euo pipefail
 TOOLS="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$TOOLS/../../.." && pwd)"
 cd "$ROOT/figures"
-BUILD=.build
+# A directory of this run's own. The root .latexmkrc runs this script before
+# every build of a document, so two runs at once are ordinary (two documents
+# built side by side); sharing one directory, each would delete the other's
+# files on exit.
+BUILD=".build/$$"
 PYTHON="${PYTHON:-python3}"
-trap 'rm -rf "$BUILD"' EXIT
+trap 'rm -rf "$BUILD"; rmdir .build 2>/dev/null || true' EXIT
 
 force=0
 pdf=0
@@ -101,13 +105,14 @@ stale() {
   return 1
 }
 
-# tikz-tensors is a submodule: present it before the first LaTeX page, so a
-# fresh clone (or a repository made from the template) builds with no setup.
-for src in "${sources[@]}"; do
-  case "$src" in *.tex) "$TOOLS/tikz-tensors.sh" ensure; break ;; esac
-done
+# tikz-tensors is a submodule: present it before the first LaTeX page that is
+# built, so a fresh clone (or a repository made from the template) builds with
+# no setup. Not before that: a run with nothing to build needs neither git nor
+# the network, and the root .latexmkrc makes such a run before every document.
+ensured=0
 
-for src in "${sources[@]}"; do
+# ${sources[@]+...}: bash 3.2 (macOS) calls an empty array unbound under set -u.
+for src in ${sources[@]+"${sources[@]}"}; do
   rel="${src#src/}"
   topic="$(dirname "$rel")"
   name="${rel##*/}"; name="${name%.*}"
@@ -122,6 +127,7 @@ for src in "${sources[@]}"; do
   mkdir -p "assets/$topic"
   case "$src" in
     *.tex)
+      [ "$ensured" -eq 1 ] || { "$TOOLS/tikz-tensors.sh" ensure; ensured=1; }
       mkdir -p "$BUILD/$topic"
       # The trailing ':' keeps TeX's default search path after the shared files.
       # Only tikz-tensors/tex, not the whole submodule: its tests and examples
@@ -143,8 +149,13 @@ for src in "${sources[@]}"; do
           exit 1
         fi
       fi
-      [ "$pdfonly" -eq 1 ] || pdftocairo -svg "$BUILD/$topic/$name.pdf" "$svg"
-      [ "$pdf" -eq 0 ] || cp "$BUILD/$topic/$name.pdf" "assets/$topic/$name.pdf"
+      # Moved into place, never written there: a document compiled meanwhile
+      # reads the old file or the new one, not half of either.
+      if [ "$pdfonly" -eq 0 ]; then
+        pdftocairo -svg "$BUILD/$topic/$name.pdf" "$BUILD/$topic/$name.svg"
+        mv "$BUILD/$topic/$name.svg" "$svg"
+      fi
+      [ "$pdf" -eq 0 ] || mv "$BUILD/$topic/$name.pdf" "assets/$topic/$name.pdf"
       ;;
     *.py)
       # Write into .build/ and move on success, so a failed run (a missing
@@ -163,7 +174,12 @@ for src in "${sources[@]}"; do
 done
 
 # assets/ mirrors src/: drop an SVG or PDF whose source is gone, then empty topics.
-find assets \( -name '*.svg' -o -name '*.pdf' \) | while IFS= read -r out; do
+# --pdf-only drops PDFs alone: an SVG is a committed file, and deleting one is
+# for the writer's own build to do, not for a build of a document.
+orphans=(-name '*.svg' -o -name '*.pdf')
+[ "$pdfonly" -eq 0 ] || orphans=(-name '*.pdf')
+[ -d assets ] || exit 0
+find assets \( "${orphans[@]}" \) | while IFS= read -r out; do
   rel="${out#assets/}"; base="src/${rel%.*}"
   [ -f "$base.tex" ] || [ -f "$base.py" ] || { rm "$out"; echo "removed figures/$out (no source)"; }
 done

@@ -59,7 +59,11 @@ checkout() {  # <tag|latest>: check it out in the submodule; it must be a releas
 }
 
 ensure() {  # [tag|latest]: make the submodule present; a new one is added at it (default latest)
-  git_root config push.recurseSubmodules check
+  # Written once, not on every call: build.sh calls this before each build of a
+  # document, and two builds at once (or in two worktrees, which share one
+  # .git/config) would otherwise fight over the lock on that file.
+  [ "$(git_root config --get push.recurseSubmodules || true)" = check ] \
+    || git_root config push.recurseSubmodules check
   [ -f "$STY" ] && return 0
   if [ -n "$(pinned)" ]; then
     git_root submodule update --init -- "$REL" >&2 \
