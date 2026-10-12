@@ -4,7 +4,8 @@ name: Initialize from template
 # Resets every document to 0.1.0, clears the template's changelog, removes
 # LICENSE, which covers the template rather than the work written with it,
 # re-pins the tikz-tensors and .claude submodules, which the copy
-# leaves empty, and deletes the two Sync workflows, which only the template runs.
+# leaves empty, empties figures/generated/, which holds the template's own
+# built figures, and deletes the two Sync workflows, which only the template runs.
 #
 # Guarded twice: is_template is true only in the template repository itself,
 # and the slug exclusion is a backstop. Self-deletion is the third.
@@ -77,6 +78,16 @@ jobs:
             git submodule add --force https://github.com/pen-sotashimozono/.claude .claude
             git add .gitmodules .claude
           fi
+
+          # figures/generated/ holds what build.sh made of the template's pages.
+          # They are the template's files, built with its TeX Live and its pin,
+          # and a project commits only what it has built itself. The pages
+          # under figures/src/ stay: build.sh makes the SVGs again from them,
+          # and latexmk the PDFs a document includes.
+          git rm -r -q --ignore-unmatch figures/generated
+          mkdir -p figures/generated
+          : > figures/generated/.gitkeep
+          git add figures/generated
 
           # The daily syncs keep the template itself on tikz-tensors' main and
           # on .claude's. A project moves when it chooses -- tikz-tensors.sh pin

@@ -67,10 +67,10 @@ class BuildScript(unittest.TestCase):
         page = repo.root / "figures/src/t/a.py"
         for arg in ("t", "src/t", "figures/src/t", "figures/src/t/a.py", str(page)):
             with self.subTest(arg=arg):
-                shutil.rmtree(repo.root / "figures/assets", ignore_errors=True)
+                shutil.rmtree(repo.root / "figures/generated", ignore_errors=True)
                 out = repo.build(arg)
-                self.assertIn("figures/assets/t/a.svg", out)
-                self.assertTrue((repo.root / "figures/assets/t/a.svg").is_file())
+                self.assertIn("figures/generated/t/a.svg", out)
+                self.assertTrue((repo.root / "figures/generated/t/a.svg").is_file())
 
     def test_up_to_date_is_a_no_op_and_force_rebuilds(self):
         repo = FigureRepo(self)
@@ -79,7 +79,7 @@ class BuildScript(unittest.TestCase):
                     ".github/tools/figures/schematic.py", ".github/tools/figures/paper_figures.py"):
             repo.age(rel, -100)
         self.assertEqual(repo.build(), [])
-        self.assertEqual(sorted(repo.build("--force")), ["figures/assets/t/a.svg", "figures/assets/t/b.svg"])
+        self.assertEqual(sorted(repo.build("--force")), ["figures/generated/t/a.svg", "figures/generated/t/b.svg"])
 
     def test_shared_module_marks_pages_stale_but_paper_figures_does_not(self):
         repo = FigureRepo(self)
@@ -92,19 +92,21 @@ class BuildScript(unittest.TestCase):
         repo.age(".github/tools/figures/schematic.py", 100)
         self.assertEqual(len(repo.build()), 2, "editing schematic.py must rerun the pages that import it")
 
-    def test_orphans_are_removed_from_assets_only(self):
+    def test_orphans_are_removed_from_generated_only(self):
         repo = FigureRepo(self)
         repo.build()
-        repo.write("figures/assets/t/gone.svg", "<svg/>")
-        repo.write("figures/assets/t/gone.pdf", "%PDF")
-        repo.write("figures/assets/old/x.svg", "<svg/>")
+        repo.write("figures/generated/t/gone.svg", "<svg/>")
+        repo.write("figures/generated/t/gone.pdf", "%PDF")
+        repo.write("figures/generated/old/x.svg", "<svg/>")
         doc = repo.write("figures/document-figure.pdf", "%PDF")
+        mine = repo.write("figures/assets/plot.pdf", "%PDF")
         repo.build()
-        self.assertFalse((repo.root / "figures/assets/t/gone.svg").exists())
-        self.assertFalse((repo.root / "figures/assets/t/gone.pdf").exists())
-        self.assertFalse((repo.root / "figures/assets/old").exists(), "an emptied topic goes too")
+        self.assertFalse((repo.root / "figures/generated/t/gone.svg").exists())
+        self.assertFalse((repo.root / "figures/generated/t/gone.pdf").exists())
+        self.assertFalse((repo.root / "figures/generated/old").exists(), "an emptied topic goes too")
         self.assertTrue(doc.exists(), "the documents' own figures are not build.sh's to delete")
-        self.assertTrue((repo.root / "figures/assets/t/a.svg").exists())
+        self.assertTrue(mine.exists(), "assets/ holds figures made by hand, which have no page under src/")
+        self.assertTrue((repo.root / "figures/generated/t/a.svg").exists())
 
 
 TEX_STUBS = {
@@ -139,23 +141,23 @@ class PdfOnly(unittest.TestCase):
 
     def test_builds_the_missing_pdf_and_leaves_every_svg_alone(self):
         repo = self.repo()
-        svg = repo.write("figures/assets/t/c.svg", "committed")
-        repo.age("figures/assets/t/c.svg", -100)          # older than its page, as after a checkout
-        self.assertEqual(self.build(repo, "--pdf-only"), ["figures/assets/t/c.pdf"])
+        svg = repo.write("figures/generated/t/c.svg", "committed")
+        repo.age("figures/generated/t/c.svg", -100)          # older than its page, as after a checkout
+        self.assertEqual(self.build(repo, "--pdf-only"), ["figures/generated/t/c.pdf"])
         self.assertEqual(svg.read_text(), "committed", "a checkout's SVG must not be rewritten")
-        self.assertFalse((repo.root / "figures/assets/t/a.svg").exists(), "Python pages have no PDF")
+        self.assertFalse((repo.root / "figures/generated/t/a.svg").exists(), "Python pages have no PDF")
         self.assertEqual(self.build(repo, "--pdf-only"), [], "up to date is a no-op")
 
     def test_a_page_newer_than_its_pdf_is_rebuilt(self):
         repo = self.repo()
         self.build(repo, "--pdf-only")
-        repo.age("figures/assets/t/c.pdf", -100)
-        self.assertEqual(self.build(repo, "--pdf-only"), ["figures/assets/t/c.pdf"])
+        repo.age("figures/generated/t/c.pdf", -100)
+        self.assertEqual(self.build(repo, "--pdf-only"), ["figures/generated/t/c.pdf"])
 
     def test_the_full_build_still_writes_both(self):
         repo = self.repo()
-        self.assertIn("figures/assets/t/c.svg", self.build(repo, "--pdf"))
-        self.assertTrue((repo.root / "figures/assets/t/c.pdf").is_file())
+        self.assertIn("figures/generated/t/c.svg", self.build(repo, "--pdf"))
+        self.assertTrue((repo.root / "figures/generated/t/c.pdf").is_file())
 
     def test_nothing_to_build_needs_neither_git_nor_the_network(self):
         repo = self.repo()
@@ -181,22 +183,22 @@ class PdfOnly(unittest.TestCase):
         start = time.time()
         r = subprocess.run(cmd, capture_output=True, text=True, env=env)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(sorted(r.stdout.split()), [f"figures/assets/t/{n}.pdf" for n in "cdefgh"])
+        self.assertEqual(sorted(r.stdout.split()), [f"figures/generated/t/{n}.pdf" for n in "cdefgh"])
         self.assertLess(time.time() - start, 2.0, "six pages of 0.5 s each, one after another, take 3 s")
         (self.bin / "latexmk").write_text('#!/bin/sh\ncase "$*" in *e.tex*) exit 1;; esac\n' + slow.split("\n", 1)[1])
         r = subprocess.run(cmd + ["--force"], capture_output=True, text=True, env=env)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("src/t/e.tex failed", r.stderr)
-        self.assertEqual(sorted(r.stdout.split()), [f"figures/assets/t/{n}.pdf" for n in "cdfgh"],
+        self.assertEqual(sorted(r.stdout.split()), [f"figures/generated/t/{n}.pdf" for n in "cdfgh"],
                          "one broken page does not keep the others from being built")
 
     def test_an_svg_whose_page_is_gone_is_left_for_the_writer(self):
         repo = self.repo()
-        svg = repo.write("figures/assets/t/gone.svg", "committed")
-        repo.write("figures/assets/t/gone.pdf", "%PDF")
+        svg = repo.write("figures/generated/t/gone.svg", "committed")
+        repo.write("figures/generated/t/gone.pdf", "%PDF")
         self.build(repo, "--pdf-only")
         self.assertTrue(svg.exists(), "a build of a document must not delete a committed SVG")
-        self.assertFalse((repo.root / "figures/assets/t/gone.pdf").exists(), "the built PDF does go")
+        self.assertFalse((repo.root / "figures/generated/t/gone.pdf").exists(), "the built PDF does go")
 
     def test_two_runs_at_once_do_not_share_a_build_directory(self):
         # What `latexmk main.tex` and `latexmk notes.tex` side by side amount to. The
@@ -212,8 +214,8 @@ class PdfOnly(unittest.TestCase):
         second = subprocess.run(cmd, cwd=repo.root, env=env, capture_output=True, text=True)
         _, err = first.communicate()
         self.assertEqual((first.returncode, second.returncode), (0, 0), err.decode() + second.stderr)
-        self.assertEqual((repo.root / "figures/assets/t/c.pdf").read_text(), "%PDF")
-        self.assertFalse((repo.root / "figures/.build").exists(), "nothing but src/ and assets/ remains")
+        self.assertEqual((repo.root / "figures/generated/t/c.pdf").read_text(), "%PDF")
+        self.assertFalse((repo.root / "figures/.build").exists(), "nothing but src/ and generated/ remains")
 
 
 class Closure(unittest.TestCase):
@@ -232,17 +234,17 @@ class Closure(unittest.TestCase):
             ".github/tools/figures/tikz-tensors", "notes.tex",
         }
         # Through a build record, as `affected` reads it: the line latexmk writes for
-        # \includegraphics{assets/t/page} is the only trace of the figure in out/.
+        # \includegraphics{generated/t/page} is the only trace of the figure in out/.
         root = tmpdir(self)
         (root / "out").mkdir()
-        (root / "out/notes.fls").write_text(f"PWD {root}\nINPUT ./notes.tex\nINPUT ./figures/assets/t/page.pdf\n")
+        (root / "out/notes.fls").write_text(f"PWD {root}\nINPUT ./notes.tex\nINPUT ./figures/generated/t/page.pdf\n")
         self.addCleanup(setattr, closure, "ROOT", closure.ROOT)
         closure.ROOT = root
         self.assertEqual(closure.closure("notes", {"version": "0.1.0"}, tracked), tracked - {
             ".github/tools/figures/build.sh"})
         self.assertEqual(closure.closure("notes", {"version": "0.1.0"}, {"notes.tex"}), {"notes.tex"})
 
-        got = closure.figure_sources("figures/assets/t/page.pdf", tracked)
+        got = closure.figure_sources("figures/generated/t/page.pdf", tracked)
         self.assertEqual(got & tracked, {
             "figures/src/t/page.tex", ".github/tools/figures/preamble.tex",
             ".github/tools/figures/notation.tex", ".github/tools/figures/tikz-tensors",
@@ -328,7 +330,7 @@ class ArxivBundle(unittest.TestCase):
         (root / "main.tex").write_text("\\documentclass{article}\n")
         (root / "out").mkdir()
         (root / "out/main.bbl").write_text("")
-        for rel in ("figures/top.pdf", "figures/assets/t/page.pdf",
+        for rel in ("figures/top.pdf", "figures/generated/t/page.pdf",
                     "figures/.build/t/junk.pdf", "figures/papers/other-fig1.pdf"):
             (root / rel).parent.mkdir(parents=True, exist_ok=True)
             (root / rel).write_text("%PDF")
@@ -338,7 +340,7 @@ class ArxivBundle(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         dest = root / "dest"
         self.assertTrue((dest / "top.pdf").is_file())
-        self.assertTrue((dest / "assets/t/page.pdf").is_file(), "nested figure path must survive")
+        self.assertTrue((dest / "generated/t/page.pdf").is_file(), "nested figure path must survive")
         shipped = {p.name for p in dest.rglob("*.pdf")}
         self.assertNotIn("junk.pdf", shipped)
         self.assertNotIn("other-fig1.pdf", shipped)

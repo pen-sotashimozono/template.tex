@@ -48,7 +48,7 @@ else
   echo "::warning::$DOC: out/$STEM.bbl is missing, so the bundle has no bibliography. Build $ROOT_TEX first." >&2
 fi
 
-# Figures keep their path below figures/, so \includegraphics{assets/<topic>/<page>}
+# Figures keep their path below figures/, so \includegraphics{generated/<topic>/<page>}
 # still resolves once \graphicspath{{figures/}} points nowhere in the bundle
 # (LaTeX falls back to the current directory). figures/.build/ holds the figure
 # build's intermediates and figures/papers/ other papers' figures, not ours.

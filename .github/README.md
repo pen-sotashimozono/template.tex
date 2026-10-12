@@ -24,7 +24,8 @@ carries its own preamble, so either ships alone.
 Click **Use this template**, then clone. On the first push `Initialize.yml`
 runs once and deletes itself: every document goes to `0.1.0`, the template's
 changelog is cleared, `LICENSE` is removed — the MIT licence covers the
-template, not the work you write with it — and the
+template, not the work you write with it —, `figures/generated/` is emptied
+of the template's built figures, and the
 [tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors) submodule
 (the figures' TikZ format) is pinned at its main — always its newest release — since the template
 copy leaves it empty. Clone with `--recurse-submodules`, or let
@@ -52,10 +53,11 @@ notes.tex                   # working notebook, article
 supplemental.tex            # supplementary material (optional)
 references.bib              # bibliography, from `doiget cite`
 docs.toml                   # root documents and versions — the version authority
-figures/                    # the documents' figures (PDF); src/ figure pages -> assets/ (SVG committed,
+figures/                    # src/ figure pages -> generated/ (SVG committed,
                             #   PDF built by latexmk and not committed);
+                            #   assets/ figures made by hand, the originals;
                             #   papers/ cited papers' own figures
-notes/                      # children of notes.tex
+src/notes/  src/main/       # children of notes.tex and of main.tex, one directory per document
 papers/  papers/src/            # one PDF per bibkey; full text for grepping
 .latexmkrc                  # LuaLaTeX + BibTeX into out/
 CLAUDE.md  LICENSE          # root-only, see below

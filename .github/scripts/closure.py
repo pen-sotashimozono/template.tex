@@ -19,7 +19,7 @@ Only files git tracks survive the filter, so TeX Live paths and build products
 under out/ drop out on their own.
 
 One build product is read through to its sources. The PDF of a figure page,
-figures/assets/<topic>/<page>.pdf, is built and not committed, so the record
+figures/generated/<topic>/<page>.pdf, is built and not committed, so the record
 names a file git does not know. It stands for the page it was built from,
 figures/src/<topic>/<page>.tex, and for what every page reads: the shared
 .tex and .sty files beside build.sh and the pin of tikz-tensors. Without
@@ -120,7 +120,7 @@ def to_repo_path(base: pathlib.Path, raw: str) -> str | None:
 
 
 FIGURE_TOOLS = ".github/tools/figures"
-FIGURE_PDF = re.compile(r"figures/assets/(.+)\.pdf")
+FIGURE_PDF = re.compile(r"figures/generated/(.+)\.pdf")
 
 
 def figure_sources(path: str, tracked: set[str]) -> set[str]:

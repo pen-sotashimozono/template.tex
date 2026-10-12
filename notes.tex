@@ -162,7 +162,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Notes}
 \label{sec:notes}
-Working notebook. Keep child files in \texttt{notes/} and pull them in with
+Working notebook. Keep child files in \texttt{src/notes/} and pull them in with
 \verb|\input|; the dependency closure picks them up from the build record, so a
 change in a child bumps this document and not the paper. Writing the path out
 here would be read by latexpand as a real inclusion, so it is left implied.
@@ -180,12 +180,12 @@ The revision markup works here as well: \sh{author edit},
 \subsection{A figure page}
 \label{sec:notes-figure}
 
-A page under \texttt{figures/src/} is built into \texttt{figures/assets/} and
+A page under \texttt{figures/src/} is built into \texttt{figures/generated/} and
 included from there. Its SVG is committed and its PDF is not: \texttt{latexmk}
 builds the PDFs that are missing or older than their page before it compiles
 the document.
 \begin{equation}
-  \vcenter{\hbox{\includegraphics{assets/example/03-mps}}}
+  \vcenter{\hbox{\includegraphics{generated/example/03-mps}}}
 \end{equation}
 
 \subsection{Four heading levels}

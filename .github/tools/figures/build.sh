@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Build the figure pages under figures/src/ into figures/assets/, one per page:
+# Build the figure pages under figures/src/ into figures/generated/, one per page:
 #
-#   figures/src/<topic>/<name>.tex   standalone LaTeX  -> figures/assets/<topic>/<name>.svg
+#   figures/src/<topic>/<name>.tex   standalone LaTeX  -> figures/generated/<topic>/<name>.svg
 #   figures/src/<topic>/<name>.py    script that writes the SVG path it is given
 #
 #   .github/tools/figures/build.sh                       # every page that is out of date
@@ -12,7 +12,7 @@
 #   .github/tools/figures/build.sh --pdf-only            # only the PDFs that are missing or out of date
 #
 # figures/ holds only what a writer looks at: the pages (src/) and what they
-# build into (assets/). Everything that runs them sits here, next to this
+# build into (generated/). Everything that runs them sits here, next to this
 # script: preamble.tex (every .tex page does \input{preamble}), tikz-tensors/
 # (a git submodule, the TikZ format and theme: \usepackage{tikz-tensors} for
 # tensor diagrams; tikz-tensors.sh pins its version, and is called here to
@@ -27,7 +27,7 @@
 # $PYTHON (default python3).
 #
 # --pdf keeps <name>.pdf next to <name>.svg for .tex pages, for a document
-# that \includegraphics the page (graphicspath {figures/}: assets/<topic>/<name>).
+# that \includegraphics the page (graphicspath {figures/}: generated/<topic>/<name>).
 # The SVG is what slides paste; the PDF is what LaTeX includes.
 #
 # The SVGs are committed and the PDFs are not (.gitignore): a PDF is stored
@@ -41,8 +41,8 @@
 # script without --pdf-only (with --pdf) so that the SVG follows.
 #
 # One page per source; a .tex that produces more is an error. LaTeX runs in
-# figures/.build/, which is deleted on exit, so nothing but src/ and assets/
-# remains. An SVG (or PDF) whose source is gone is deleted too, so assets/
+# figures/.build/, which is deleted on exit, so nothing but src/ and generated/
+# remains. An SVG (or PDF) whose source is gone is deleted too, so generated/
 # always mirrors src/. LaTeX SVGs come from the PDF with pdftocairo, which
 # turns glyphs into paths: they render without the TeX fonts installed.
 set -euo pipefail
@@ -109,8 +109,8 @@ stale() {
 # checkout is not ours to judge). Python pages have no PDF, hence nothing.
 output() {
   local rel="${1#src/}"
-  if [ "$pdfonly" -eq 0 ]; then echo "assets/${rel%.*}.svg"; return; fi
-  case "$1" in *.tex) echo "assets/${rel%.*}.pdf" ;; esac
+  if [ "$pdfonly" -eq 0 ]; then echo "generated/${rel%.*}.svg"; return; fi
+  case "$1" in *.tex) echo "generated/${rel%.*}.pdf" ;; esac
 }
 
 # One page, in a subshell of its own: `exit` ends the page, not the run.
@@ -118,8 +118,8 @@ build_page() {
   local src="$1" rel="${1#src/}" topic name svg pages
   topic="$(dirname "$rel")"
   name="${rel##*/}"; name="${name%.*}"
-  svg="assets/$topic/$name.svg"
-  mkdir -p "assets/$topic" "$BUILD/$topic"
+  svg="generated/$topic/$name.svg"
+  mkdir -p "generated/$topic" "$BUILD/$topic"
   case "$src" in
     *.tex)
       # The trailing ':' keeps TeX's default search path after the shared files.
@@ -148,12 +148,12 @@ build_page() {
         pdftocairo -svg "$BUILD/$topic/$name.pdf" "$BUILD/$topic/$name.svg"
         mv "$BUILD/$topic/$name.svg" "$svg"
       fi
-      [ "$pdf" -eq 0 ] || mv "$BUILD/$topic/$name.pdf" "assets/$topic/$name.pdf"
+      [ "$pdf" -eq 0 ] || mv "$BUILD/$topic/$name.pdf" "generated/$topic/$name.pdf"
       ;;
     *.py)
       # Write into .build/ and move on success, so a failed run (a missing
       # pyscf, say) leaves the existing SVG in place.
-      # No __pycache__ next to a shared module: nothing is written outside assets/.
+      # No __pycache__ next to a shared module: nothing is written outside generated/.
       if ! PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$TOOLS${PYTHONPATH:+:$PYTHONPATH}" \
           "$PYTHON" "$src" "$BUILD/$topic/$name.svg" >/dev/null; then
         echo "error: $src failed (PYTHON=$PYTHON); $svg left as it was" >&2
@@ -200,17 +200,17 @@ for src in ${todo[@]+"${todo[@]}"}; do
 done
 reap
 
-# assets/ mirrors src/: drop an SVG or PDF whose source is gone, then empty topics.
+# generated/ mirrors src/: drop an SVG or PDF whose source is gone, then empty topics.
 # --pdf-only drops PDFs alone: an SVG is a committed file, and deleting one is
 # for the writer's own build to do, not for a build of a document.
 orphans=(-name '*.svg' -o -name '*.pdf')
 [ "$pdfonly" -eq 0 ] || orphans=(-name '*.pdf')
-if [ -d assets ]; then
-  find assets \( "${orphans[@]}" \) | while IFS= read -r out; do
-    rel="${out#assets/}"; base="src/${rel%.*}"
+if [ -d generated ]; then
+  find generated \( "${orphans[@]}" \) | while IFS= read -r out; do
+    rel="${out#generated/}"; base="src/${rel%.*}"
     [ -f "$base.tex" ] || [ -f "$base.py" ] || { rm "$out"; echo "removed figures/$out (no source)"; }
   done
-  find assets -mindepth 1 -type d -empty -delete
+  find generated -mindepth 1 -type d -empty -delete
 fi
 
 [ "$failed" -eq 0 ] || exit 1
