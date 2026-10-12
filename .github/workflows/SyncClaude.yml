@@ -1,0 +1,82 @@
+name: Sync .claude
+
+# The template itself follows .claude: every day (or on demand) it moves the
+# submodule to .claude's main, checks that the move did not empty the directory,
+# and commits the result to main. Nothing happens when main has not moved.
+#
+# Only the template runs this. A repository made from it chooses when to move,
+# because the rules under .claude/rules are in force while its text is being
+# written and should not change underneath an author mid-draft. Initialize.yml
+# deletes this file along with itself.
+#
+# Nothing is rebuilt. .claude is in no document's dependency closure, so the
+# pin moves without a version bump and latex-ci has nothing to say about it.
+
+on:
+  schedule:
+    - cron: "41 3 * * *"   # daily, 03:41 UTC -- after the tikz-tensors sync
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-claude
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'pen-sotashimozono/template.tex'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Move the pin to .claude's main
+        id: pin
+        run: |
+          # `git ls-files -s` reads the INDEX, and `submodule update --remote`
+          # moves the submodule's HEAD without staging the new gitlink, so the
+          # two sides of this comparison have to be read from different places.
+          before="$(git ls-files -s .claude | awk '{print $2}')"
+          git submodule update --remote --checkout .claude
+          after="$(git -C .claude rev-parse HEAD)"
+          short="$(git -C .claude rev-parse --short HEAD)"
+          subject="$(git -C .claude log -1 --pretty=%s)"
+          echo "short=$short" >> "$GITHUB_OUTPUT"
+          echo "subject=$subject" >> "$GITHUB_OUTPUT"
+          if [ "$before" = "$after" ]; then
+            echo "Already at .claude main ($short); nothing to do."
+            echo "moved=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Moving $before -> $after ($short)."
+            echo "moved=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # A pin that emptied the directory would take the rules and the skills
+      # away from every repository generated afterwards, and nothing else here
+      # would fail. Refuse the move instead.
+      - name: Check the move left something behind
+        if: steps.pin.outputs.moved == 'true'
+        run: |
+          for d in rules skills; do
+            if [ -z "$(find ".claude/$d" -name '*.md' -print -quit 2>/dev/null)" ]; then
+              echo "::error::.claude/$d holds no .md after the move; refusing to pin."
+              exit 1
+            fi
+          done
+          echo "rules:  $(find .claude/rules  -name '*.md' | wc -l) file(s)"
+          echo "skills: $(find .claude/skills -name 'SKILL.md' | wc -l) skill(s)"
+
+      - name: Commit to main
+        if: steps.pin.outputs.moved == 'true'
+        env:
+          SHORT: ${{ steps.pin.outputs.short }}
+          SUBJECT: ${{ steps.pin.outputs.subject }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .claude
+          git commit -m "chore: .claude $SHORT (daily sync with its main)" -m "$SUBJECT"
+          git push origin HEAD:main

@@ -36,8 +36,8 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
 | `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py` |
 | `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `paper_figures.py`, and `tikz-tensors/` (the TikZ format and theme, a git submodule pinned by `tikz-tensors.sh`) |
-| `.claude/rules/` | one file per subject (`prose.md`, `mathematics.md`, `structure.md`, `accuracy.md`, `review-notes.md`), all in force unless listed under "Rules not in force" below |
-| `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure) |
+| `.claude/rules/` | one file per subject, listed in `.claude/README.md`; all in force unless listed under "Rules not in force" below |
+| `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure), `cold-read` (a reader who did not write the passage, before the author sees it) |
 | `out/` | build output (gitignored) |
 
 `.claude` is a git submodule,
@@ -49,7 +49,11 @@ first**, then `git add .claude` here; `git submodule update --remote .claude`
 moves to its newest main. Everything in it is shared, so what belongs to this
 repository only is written in this file. `Initialize.yml` adds it afresh at
 its main in a repository made from this template, for the same reason
-as tikz-tensors below.
+as tikz-tensors below. The template itself follows `.claude`'s main daily
+(`SyncClaude.yml`: move the pin, refuse the move if it emptied `rules/` or
+`skills/`, commit); initialization deletes that workflow, because the rules are
+in force while a project's text is being written and should not move under its
+author. A project therefore pins when it chooses.
 
 `latexmk main.tex` → `out/main.pdf`, `latexmk notes.tex` → `out/notes.pdf`. One
 `.latexmkrc` serves both; the stems differ so nothing collides.

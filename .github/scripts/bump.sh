@@ -36,7 +36,18 @@ case "$KIND" in patch|minor|major) ;; *) usage ;; esac
 if [ "$TARGET" = "--affected" ]; then
   BASE=main
   git -C "$ROOT" rev-parse --verify --quiet "$BASE" >/dev/null || BASE=origin/main
-  AFFECTED="$("$PY" "$CLOSURE" affected --base "$BASE" 2>/dev/null || true)
+  # closure.py fails when a root has no build record, and a swallowed failure
+  # here reads as "nothing was affected" -- which is the one answer that makes
+  # bump.sh do the wrong thing silently. Let it speak. exports.py is different:
+  # it has nothing to say in a repository with no exports, and that is not an
+  # error.
+  if ! CLOSURE_OUT="$("$PY" "$CLOSURE" affected --base "$BASE" 2>&1)"; then
+    printf '%s\n' "$CLOSURE_OUT" >&2
+    echo "bump.sh: --affected needs a build record for EVERY root in docs.toml," >&2
+    echo "         not only the one that changed. Build them and run this again." >&2
+    exit 1
+  fi
+  AFFECTED="$CLOSURE_OUT
 $("$PY" "$EXPORTS" affected --base "$BASE" 2>/dev/null || true)"
 
   # A document absent from the base branch is new, and the version check
