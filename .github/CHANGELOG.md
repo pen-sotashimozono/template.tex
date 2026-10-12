@@ -23,6 +23,10 @@ those entries are left as written rather than rewritten to match.
 
 <!-- new entries go directly below this line -->
 
+## v0.0.17-notes — 2026-10-12
+
+The example tensor diagrams are drawn with tikz-tensors v0.18.1 and the project's own notation file.
+
 ## v0.0.16-notes — 2026-10-12
 
 Child files of a document are kept in src/<document id>/ (src/notes/, src/main/), no longer in notes/. What build.sh makes of the figure pages is in figures/generated/, and figures/assets/ now holds figures made by hand.
