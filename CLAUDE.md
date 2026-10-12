@@ -103,6 +103,11 @@ in a build record as the page it came from, the shared `.tex` and `.sty` files
 beside `build.sh` and the tikz-tensors pin, so a PR that changes only a figure
 still counts as touching the documents that include it.
 
+A page that does not build fails CI, so it is neither merged nor released. On
+your own machine it is a warning: the other pages are built, the documents
+compile, and a document that includes the broken page shows the PDF of its
+last good build, or stops at the file it cannot find.
+
 Pages are built several at a time, as many as there are processors
 (`FIGURE_JOBS` overrides). In CI each job that compiles a document restores
 the PDFs from a cache keyed on everything a page reads (the pages, the files
