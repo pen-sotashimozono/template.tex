@@ -9,7 +9,8 @@ name: Auto Release
 # tag?" is how the two jobs after it decide what to release. A PR that renames
 # a table in docs.toml would otherwise have the document released again under
 # its new id, as if it were new and with no diff, while its history stayed
-# under the old one.
+# under the old one. The job holds the release back until the tags have been
+# moved by hand (rename_releases.py), and says how.
 
 on:
   pull_request:
@@ -22,22 +23,31 @@ permissions:
 
 jobs:
   rename:
-    name: Move the releases of a renamed document
+    name: Have the releases of a renamed document been moved?
     if: github.event.pull_request.merged == true
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","rosina"]') || 'ubuntu-latest' }}
     permissions:
-      contents: write
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
 
-      # Against the commit main was at before the merge: the first parent,
-      # for a merge commit and a squash alike.
-      - name: Rename the tags, releases and files of each document renamed in docs.toml
+      # This job finds a rename and stops; it does not move anything. Moving a
+      # release means making a tag on an old commit, and the token a workflow
+      # runs with may not: where the workflow files of that commit differ from
+      # today's, GitHub takes the tag for a change to a workflow and refuses it,
+      # by push and through the API alike (tried here, 2026-10-12). Someone
+      # signed in to GitHub can, so the move is one command on their machine.
+      #
+      # Against the commit main was at before the merge: the first parent, for
+      # a merge commit and a squash alike.
+      - name: Stop until the tags of each renamed document have been moved
         env:
           GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           RENAMED="$(python3 .github/scripts/rename_releases.py --renamed-since HEAD^1)"
@@ -45,21 +55,39 @@ jobs:
             echo "No document was renamed."
             exit 0
           fi
-          echo "$RENAMED" | while read -r OLD NEW; do
-            echo "::group::${OLD} -> ${NEW}"
-            # --keep-workflow: a tag pushed with GITHUB_TOKEN starts no workflow.
-            python3 .github/scripts/rename_releases.py "$OLD" "$NEW" --apply --keep-workflow
-            echo "::endgroup::"
-          done
-          # The headings of the old id's entries, rewritten in the working tree.
-          if ! git diff --quiet -- .github/CHANGELOG.md; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -q -m "chore: changelog headings follow the renamed document" -- .github/CHANGELOG.md
-            # main may have moved on; the headings are whole lines no other change shares.
-            git pull -q --rebase origin main
-            git push -q origin HEAD:main
+          # Said by hand, for what cannot be seen from the tags: two documents
+          # that traded ids both have tags before and after.
+          if gh pr view "$PR" --json labels -q '.labels[].name' | grep -qx 'releases-renamed'; then
+            echo "The pull request is labelled releases-renamed: taken as done."
+            exit 0
           fi
+          git fetch --quiet --tags --force origin
+          TODO="$(echo "$RENAMED" | while read -r OLD NEW; do
+            if git tag --list "v[0-9]*-${OLD}" "${OLD}-v[0-9]*" | grep -q .; then
+              echo "python3 .github/scripts/rename_releases.py ${OLD} ${NEW} --apply"
+            fi
+          done)"
+          if [ -z "$TODO" ]; then
+            echo "Renamed, and no tag is left under an old id:"
+            echo "$RENAMED" | sed 's/ / -> /; s/^/  /'
+            exit 0
+          fi
+          echo "::error::A document was renamed in docs.toml and its releases still carry the old id. Nothing is released until they are moved."
+          {
+            echo "### Releases to move"
+            echo
+            echo "A document was renamed in \`docs.toml\`. Its tags, releases and attached files still carry the old id, and releasing now would start the document again under the new one, with no history."
+            echo
+            echo "On a machine signed in to GitHub (\`gh auth status\`), on an up-to-date \`main\`, in this order:"
+            echo
+            echo '```sh'
+            echo "$TODO"
+            echo 'git commit -m "chore: changelog headings follow the renamed document" .github/CHANGELOG.md   # then push it, by a PR or directly'
+            echo '```'
+            echo
+            echo "Then re-run this job. It passes when no tag is left under an old id. For two documents that traded ids that cannot be seen, so say it: label this pull request \`releases-renamed\` and re-run."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          exit 1
 
   release:
     needs: rename

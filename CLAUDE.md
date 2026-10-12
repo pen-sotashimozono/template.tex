@@ -225,15 +225,22 @@ python3 .github/scripts/rename_releases.py notes lecture --apply    # change it
 The old tags are deleted and GitHub does not redirect them, so a link to an
 old release stops working.
 
-It runs by itself. When a PR that renames a table in `docs.toml` is merged,
-`AutoRelease.yml` moves the releases first and only then decides what to
-release, so the document keeps its ladder. A document is followed by its
-file: it has a new id when its root (or `source`) now belongs to another
-table, because git sees the file renamed to that table's or because that table
-names the same file. Rename the file with `git mv`, in the same PR as the
-table. Two documents that trade ids are found the same way and moved through
-a temporary id; trade their `version`s in `docs.toml` too, since a version
-belongs to the document and not to the name.
+The move is made by hand, on a machine signed in to GitHub. A workflow cannot
+make it: its token may not put a tag on an old commit whose workflow files
+differ from today's. What the workflow does is notice. When a PR that renames
+a table in `docs.toml` is merged, `AutoRelease.yml` releases nothing until no
+tag is left under the old id, and prints the commands to run. Run them before
+merging (and commit the changelog in the same PR) and the job passes at once;
+run them after, and re-run the job.
+
+A document is followed by its file: it has a new id when its root (or
+`source`) now belongs to another table, because git sees the file renamed to
+that table's or because that table names the same file. Rename the file with
+`git mv`, in the same PR as the table. Two documents that trade ids are found
+the same way and moved through a temporary id, in three commands; trade their
+`version`s in `docs.toml` too, since a version belongs to the document and not
+to the name. Both have tags before and after, so the job cannot see that a
+swap is done: label the PR `releases-renamed` and re-run it.
 
 ## The submission bundle must compile alone
 
