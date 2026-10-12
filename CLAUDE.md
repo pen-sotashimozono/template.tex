@@ -31,7 +31,7 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `docs.toml` | root documents and versions — the version authority |
 | `papers/`, `papers/src/` | one PDF per bibkey; full text for grepping |
 | `figures/` | the documents' own figures (PDF) at the top; figure pages in `src/<topic>/`, built into `assets/<topic>/` (SVG, and PDF with `--pdf`); cited papers' own figures as `papers/<bibkey>-fig<N>.svg` — see below |
-| `notes/` | children of `notes.tex` |
+| `src/notes/`, `src/main/` | children of `notes.tex` and of `main.tex`: `src/<document id>/`, one directory per document |
 | `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
 | `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py` |

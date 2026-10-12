@@ -55,7 +55,7 @@ docs.toml                   # root documents and versions — the version author
 figures/                    # the documents' figures (PDF); src/ figure pages -> assets/ (SVG committed,
                             #   PDF built by latexmk and not committed);
                             #   papers/ cited papers' own figures
-notes/                      # children of notes.tex
+src/notes/  src/main/       # children of notes.tex and of main.tex, one directory per document
 papers/  papers/src/            # one PDF per bibkey; full text for grepping
 .latexmkrc                  # LuaLaTeX + BibTeX into out/
 CLAUDE.md  LICENSE          # root-only, see below
