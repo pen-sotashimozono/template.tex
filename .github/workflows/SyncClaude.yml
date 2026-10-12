@@ -19,6 +19,7 @@ on:
 
 permissions:
   contents: write
+  issues: write   # to report a sync that fails
 
 concurrency:
   group: sync-claude
@@ -80,3 +81,39 @@ jobs:
           git add .claude
           git commit -m "chore: .claude $SHORT (sync with its main)" -m "$SUBJECT"
           git push origin HEAD:main
+
+      # A sync that fails does so again every four hours, and until now the
+      # failed run was the only trace: tikz-tensors went unsynced for ten days
+      # in October 2026 before anyone looked. One issue is opened, left alone
+      # while the failure lasts, and closed by the first run that works.
+      - name: Report a failure as an issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: "The .claude sync is failing"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          open="$(gh issue list --state open --search "$TITLE in:title" --json number,title \
+            -q '[.[] | select(.title == env.TITLE)][0].number // empty')"
+          if [ -n "$open" ]; then
+            echo "Already reported in #$open."
+          else
+            gh issue create --title "$TITLE" --body "The sync of .claude (SyncClaude.yml) failed: $RUN_URL
+
+          It runs every four hours and will go on failing until this is fixed; the pin on main stays where it was. This issue is closed by the first run that succeeds."
+          fi
+
+      - name: Close the report once the sync works again
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: "The .claude sync is failing"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          open="$(gh issue list --state open --search "$TITLE in:title" --json number,title \
+            -q '[.[] | select(.title == env.TITLE)][0].number // empty')"
+          if [ -n "$open" ]; then
+            gh issue close "$open" --comment "Works again: $RUN_URL"
+          fi

@@ -13,14 +13,14 @@
 # `version` is the only version authority in this repository -- there is no
 # VERSION file. The version-check job in latex-ci.yml requires a one-step semver
 # bump for every document a PR touches, and forbids one for the documents it
-# does not; Release.yml tags <id>-v<version>. Bump with
-# `./scripts/bump.sh --affected`.
+# does not; Release.yml tags v<version>-<id>. Bump with
+# `./.github/scripts/bump.sh --affected`.
 #
 # In a repository generated from this template, Initialize.yml resets every
 # version here to 0.1.0 on the first push.
 #
 # The dependency closure of a document is NOT listed here. It is derived from
-# the document's own build record -- see scripts/closure.py. A hand-maintained
+# the document's own build record -- see .github/scripts/closure.py. A hand-maintained
 # list drifts; latexmk's records cannot.
 #
 # Each root carries its own complete preamble -- the two documents repeat what

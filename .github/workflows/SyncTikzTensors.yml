@@ -2,8 +2,8 @@ name: Sync tikz-tensors
 
 # The template itself follows tikz-tensors: every four hours (or on demand) it moves
 # the submodule to tikz-tensors' main -- which is always its newest release --
-# rebuilds the example figures with it, checks the pin and the scripts, and
-# commits the result to main. Nothing happens when main has not moved.
+# rebuilds the example figures with it, checks the pin and the scripts,
+# compiles every document, and commits the result to main. Nothing happens when main has not moved.
 #
 # Only the template runs this. A repository made from it chooses when to move
 # (tikz-tensors.sh pin), so Initialize.yml deletes this file with itself.
@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  issues: write   # to report a sync that fails
 
 concurrency:
   group: sync-tikz-tensors
@@ -76,6 +77,29 @@ jobs:
           .github/tools/figures/tikz-tensors.sh check
           python3 -m unittest discover -s .github/scripts/tests
 
+      # The commit below is pushed with GITHUB_TOKEN, and a push made with it
+      # starts no workflow: LaTeX CI never sees it. So the documents are
+      # compiled here, before the commit, in the container CI uses. A release
+      # of tikz-tensors that breaks a document stops the sync and leaves main
+      # as it was.
+      - name: List the documents
+        id: docs
+        if: steps.pin.outputs.moved == 'true'
+        run: |
+          {
+            echo "roots<<EOF"
+            for id in $(python3 .github/scripts/docs.py ids); do python3 .github/scripts/docs.py root "$id"; done
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Compile every document with the new pin
+        if: steps.pin.outputs.moved == 'true'
+        uses: xu-cheng/latex-action@v4
+        with:
+          root_file: ${{ steps.docs.outputs.roots }}
+          latexmk_use_lualatex: true
+          pre_compile: mkdir -p out
+
       - name: Commit to main
         if: steps.pin.outputs.moved == 'true'
         env:
@@ -86,3 +110,39 @@ jobs:
           git add .github/tools/figures/tikz-tensors figures/generated
           git commit -m "chore: tikz-tensors $TAG (sync with its main)"
           git push origin HEAD:main
+
+      # A sync that fails does so again every four hours, and until now the
+      # failed run was the only trace: tikz-tensors went unsynced for ten days
+      # in October 2026 before anyone looked. One issue is opened, left alone
+      # while the failure lasts, and closed by the first run that works.
+      - name: Report a failure as an issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: "The tikz-tensors sync is failing"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          open="$(gh issue list --state open --search "$TITLE in:title" --json number,title \
+            -q '[.[] | select(.title == env.TITLE)][0].number // empty')"
+          if [ -n "$open" ]; then
+            echo "Already reported in #$open."
+          else
+            gh issue create --title "$TITLE" --body "The sync of tikz-tensors (SyncTikzTensors.yml) failed: $RUN_URL
+
+          It runs every four hours and will go on failing until this is fixed; the pin on main stays where it was. This issue is closed by the first run that succeeds."
+          fi
+
+      - name: Close the report once the sync works again
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: "The tikz-tensors sync is failing"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          open="$(gh issue list --state open --search "$TITLE in:title" --json number,title \
+            -q '[.[] | select(.title == env.TITLE)][0].number // empty')"
+          if [ -n "$open" ]; then
+            gh issue close "$open" --comment "Works again: $RUN_URL"
+          fi
