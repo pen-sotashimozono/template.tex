@@ -14,18 +14,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           R: ${{ github.repository }}
         run: |
-          for t in v0.0.13-notes notes-v0.0.11 v0.0.17-notes; do
-            sha="$(git rev-parse "refs/tags/$t^{commit}")"
-            echo "== $t ($sha)"
-            if gh api "repos/$R/git/refs" -f ref="refs/tags/zzprobe-$t" -f sha="$sha" >/dev/null 2>err.txt; then
-              echo "API create: ok"
-              gh api -X DELETE "repos/$R/git/refs/tags/zzprobe-$t" && echo "API delete: ok"
-            else
-              echo "API create: REFUSED: $(cat err.txt | head -2)"
-            fi
-            if git push -q origin "$sha:refs/tags/zzprobe-push-$t" 2>err.txt; then
-              echo "git push: ok"; git push -q origin ":refs/tags/zzprobe-push-$t" && echo "git push delete: ok"
-            else
-              echo "git push: REFUSED: $(grep -o 'refusing[^)]*' err.txt | head -1)"
-            fi
-          done
+          # Does moving a release to a tag that does not exist make GitHub create it, on an old commit?
+          t=v0.0.13-notes
+          sha="$(git rev-parse "refs/tags/$t^{commit}")"
+          id="$(gh api "repos/$R/releases/tags/$t" -q .id)"
+          if gh api -X PATCH "repos/$R/releases/$id" -f tag_name=zzprobe-rel -f target_commitish="$sha" -q '"PATCH ok: tag=\(.tag_name) draft=\(.draft)"' 2>err.txt; then
+            echo "tag now at: $(git ls-remote --tags origin refs/tags/zzprobe-rel | cut -f1) (wanted $sha)"
+          else
+            echo "release PATCH: REFUSED: $(head -2 err.txt)"
+          fi
+          gh api -X PATCH "repos/$R/releases/$id" -f tag_name="$t" -q '"restored: tag=\(.tag_name) draft=\(.draft)"'
+          gh api -X DELETE "repos/$R/git/refs/tags/zzprobe-rel" 2>/dev/null && echo "probe tag deleted" || echo "no probe tag to delete"
