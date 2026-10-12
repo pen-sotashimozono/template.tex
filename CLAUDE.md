@@ -34,7 +34,7 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `notes/` | children of `notes.tex` |
 | `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
-| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py` |
+| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py`, `part.py` |
 | `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `paper_figures.py`, and `tikz-tensors/` (the TikZ format and theme, a git submodule pinned by `tikz-tensors.sh`) |
 | `.claude/rules/` | one file per subject, listed in `.claude/README.md`; all in force unless listed under "Rules not in force" below |
 | `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure), `cold-read` (a reader who did not write the passage, before the author sees it) |
@@ -57,6 +57,22 @@ author. A project therefore pins when it chooses.
 
 `latexmk main.tex` → `out/main.pdf`, `latexmk notes.tex` → `out/notes.pdf`. One
 `.latexmkrc` serves both; the stems differ so nothing collides.
+
+While writing a long document, compile only the sections being worked on:
+
+```sh
+python3 .github/scripts/part.py notes --list             # the sections: files the root \input s on their own line
+python3 .github/scripts/part.py notes 03-dmrg 04b-tdvp   # -> out/notes-part.pdf
+```
+
+The other sections are replaced by an empty file through LaTeX's own file
+substitution, passed on the command line, so neither the root nor a section
+is edited and the full document's build files are untouched. References into
+the sections left out, and the number each compiled section starts at, come
+from the last full build (`out/<stem>.aux`), so build the whole document once
+first. It is a view for writing: page numbers, the table of contents and the
+order of the bibliography are the part's own, and nothing released is built
+this way.
 
 Before editing either preamble: **revtex4-2 bundles its own `natbib`**, so only
 `notes.tex` loads it. `\affiliation`, `\email` and `acknowledgments` are
