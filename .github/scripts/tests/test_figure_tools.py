@@ -189,6 +189,8 @@ class PdfOnly(unittest.TestCase):
         r = subprocess.run(cmd + ["--force"], capture_output=True, text=True, env=env)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("src/t/e.tex failed", r.stderr)
+        self.assertEqual(sorted(r.stdout.split()), [f"figures/generated/t/{n}.pdf" for n in "cdfgh"],
+                         "one broken page does not keep the others from being built")
 
     def test_an_svg_whose_page_is_gone_is_left_for_the_writer(self):
         repo = self.repo()
@@ -254,7 +256,7 @@ class Closure(unittest.TestCase):
 class RootLatexmkrc(unittest.TestCase):
     """The figure hook in the root .latexmkrc, run as the Perl it is, with a stub bash."""
 
-    def run_rc(self, *argv, bash="exit 0", path=None):
+    def run_rc(self, *argv, bash="exit 0", path=None, ci=None):
         root = tmpdir(self)
         shutil.copy(ROOT / ".latexmkrc", root)
         (root / "figures/src").mkdir(parents=True)
@@ -265,6 +267,10 @@ class RootLatexmkrc(unittest.TestCase):
             (bin / "bash").write_text(f"#!/bin/sh\necho \"$@\" > '{root}/called'\n{bash}\n")
             (bin / "bash").chmod(0o755)
         env = dict(os.environ, PATH=f"{bin}{os.pathsep}/usr/bin{os.pathsep}/bin" if path is None else path)
+        for name in ("CI", "GITHUB_ACTIONS", "GITHUB_RUN_ID"):       # these tests run in CI too
+            env.pop(name, None)
+        if ci:
+            env[ci] = "true"
         r = subprocess.run([shutil.which("perl"), ".latexmkrc", *argv], cwd=root, capture_output=True, text=True, env=env)
         called = (root / "called").read_text().split() if (root / "called").exists() else None
         return r, called
@@ -273,10 +279,18 @@ class RootLatexmkrc(unittest.TestCase):
         r, called = self.run_rc("notes.tex")
         self.assertEqual((r.returncode, called), (0, [".github/tools/figures/build.sh", "--pdf-only"]), r.stderr)
 
-    def test_a_page_that_fails_stops_the_build(self):
+    def test_a_page_that_fails_stops_the_build_in_ci(self):
+        # GITHUB_RUN_ID is the one the LaTeX container is handed; CI is what a runner sets.
+        for name in ("CI", "GITHUB_ACTIONS", "GITHUB_RUN_ID"):
+            with self.subTest(variable=name):
+                r, _ = self.run_rc("notes.tex", bash="exit 1", ci=name)
+                self.assertNotEqual(r.returncode, 0)
+                self.assertIn("build.sh --pdf-only", r.stderr)
+
+    def test_a_page_that_fails_is_a_warning_on_a_writers_machine(self):
         r, _ = self.run_rc("notes.tex", bash="exit 1")
-        self.assertNotEqual(r.returncode, 0)
-        self.assertIn("build.sh --pdf-only", r.stderr)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("did not build", r.stderr)
 
     def test_calls_that_compile_nothing_build_no_page(self):
         for argv in (["-c", "notes.tex"], ["-C"], ["-v"], ["--version"], ["-h"]):

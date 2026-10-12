@@ -13,7 +13,15 @@ $clean_ext = 'bcf run.xml synctex.gz synctex(busy) idx ind ilg acn acr alg glg g
 # not committed, so they are made here, before the document is compiled: the
 # ones that are missing or older than their page, and nothing else. This is
 # what lets a fresh clone, a CI runner and a release build the document with
-# no step of their own. A page that fails stops the build.
+# no step of their own.
+#
+# A page that fails stops the build in CI and nowhere else. There a broken
+# page must not be merged or released. On a writer's machine it is one page
+# among many, often the one being drawn, and it must not keep every document
+# from compiling: the others are built, the failure is named, and a document
+# that includes the page shows the PDF of its last good build, or stops at the
+# file it cannot find. CI is told by its variables; GITHUB_RUN_ID is the one
+# that reaches the LaTeX container, which is not handed CI itself.
 #
 # latexmk reads this file whatever it was asked to do, so the calls that
 # compile nothing (cleaning up, printing the version or the help) are told
@@ -29,6 +37,8 @@ if ( $compiles && -d 'figures/src' && -f $figure_build ) {
         warn "latexmk: no bash to run $figure_build; the PDFs under figures/generated/ were not built\n";
     }
     elsif ( $status != 0 ) {
-        die "latexmk: the figure pages did not build; run $figure_build --pdf-only to see why\n";
+        my $message = "latexmk: a figure page did not build (named above); run $figure_build --pdf-only to see it again";
+        die "$message\n" if $ENV{CI} || $ENV{GITHUB_ACTIONS} || $ENV{GITHUB_RUN_ID};
+        warn "$message\nlatexmk: going on without it. CI stops here.\n";
     }
 }

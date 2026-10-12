@@ -182,15 +182,16 @@ for src in ${todo[@]+"${todo[@]}"}; do
 done
 
 # Pages do not read each other, so they are built several at a time: as many
-# as there are processors, or FIGURE_JOBS. A page that fails lets the others
-# of its batch finish, and the run stops there.
+# as there are processors, or FIGURE_JOBS. A page that fails does not stop
+# the others: every page that can be built is, every one that cannot is named,
+# and the run fails at the end.
 jobs="${FIGURE_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)}"
 pids=()
+failed=0
 reap() {
-  local pid failed=0
+  local pid
   for pid in ${pids[@]+"${pids[@]}"}; do wait "$pid" || failed=1; done
   pids=()
-  [ "$failed" -eq 0 ] || exit 1
 }
 for src in ${todo[@]+"${todo[@]}"}; do
   ( build_page "$src" ) &
@@ -204,9 +205,12 @@ reap
 # for the writer's own build to do, not for a build of a document.
 orphans=(-name '*.svg' -o -name '*.pdf')
 [ "$pdfonly" -eq 0 ] || orphans=(-name '*.pdf')
-[ -d generated ] || exit 0
-find generated \( "${orphans[@]}" \) | while IFS= read -r out; do
-  rel="${out#generated/}"; base="src/${rel%.*}"
-  [ -f "$base.tex" ] || [ -f "$base.py" ] || { rm "$out"; echo "removed figures/$out (no source)"; }
-done
-find generated -mindepth 1 -type d -empty -delete
+if [ -d generated ]; then
+  find generated \( "${orphans[@]}" \) | while IFS= read -r out; do
+    rel="${out#generated/}"; base="src/${rel%.*}"
+    [ -f "$base.tex" ] || [ -f "$base.py" ] || { rm "$out"; echo "removed figures/$out (no source)"; }
+  done
+  find generated -mindepth 1 -type d -empty -delete
+fi
+
+[ "$failed" -eq 0 ] || exit 1
