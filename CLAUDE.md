@@ -89,11 +89,11 @@ beside `build.sh` and the tikz-tensors pin, so a PR that changes only a figure
 still counts as touching the documents that include it.
 
 Pages are built several at a time, as many as there are processors
-(`FIGURE_JOBS` overrides). In CI the shared workflows build them once, in a
-`figures` job that runs beside the jobs needing no build, and cache them under
-a key of everything a page reads; the jobs that compile a document wait for it
-and take the PDFs as an artifact, so the `.latexmkrc` step finds nothing to do
-there. A PR that changes no figure builds none.
+(`FIGURE_JOBS` overrides). In CI each job that compiles a document restores
+the PDFs from a cache keyed on everything a page reads (the pages, the files
+beside `build.sh`, the tikz-tensors pin), so a PR that changes no figure
+builds none; with nothing to restore, the job builds them through
+`.latexmkrc` as a fresh clone does.
 
 `figures/` holds only pages and what they build into; everything that runs
 them sits in `.github/tools/figures/`. A `.tex` page starts `\input{preamble}`
