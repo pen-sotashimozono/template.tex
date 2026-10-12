@@ -24,7 +24,8 @@ carries its own preamble, so either ships alone.
 Click **Use this template**, then clone. On the first push `Initialize.yml`
 runs once and deletes itself: every document goes to `0.1.0`, the template's
 changelog is cleared, `LICENSE` is removed — the MIT licence covers the
-template, not the work you write with it — and the
+template, not the work you write with it —, `figures/generated/` is emptied
+of the template's built figures, and the
 [tikz-tensors](https://github.com/pen-sotashimozono/tikz-tensors) submodule
 (the figures' TikZ format) is pinned at its main — always its newest release — since the template
 copy leaves it empty. Clone with `--recurse-submodules`, or let

@@ -151,7 +151,9 @@ its own `latexmkrc` with `-r`, so a page never names that directory, and the
 root `.latexmkrc` never applies to pages. A document includes a page as
 `\includegraphics{generated/<topic>/<page>}` (graphicspath `figures/`); the arXiv
 bundle keeps paths below `figures/`, so that still resolves there.
-`generated/` mirrors `src/`: an output whose source is gone is deleted. A figure
+`generated/` mirrors `src/`: an output whose source is gone is deleted. In this
+template it holds the built example pages; `Initialize.yml` empties it in a
+repository made from the template, which then commits only what it builds. A figure
 made by hand goes in `figures/assets/` and is included as
 `\includegraphics{assets/<name>}`; `build.sh` never reads or writes there.
 The **`figure-pages`** skill carries the rules (formula only, one line per
