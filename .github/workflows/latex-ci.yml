@@ -17,4 +17,4 @@ permissions:
 
 jobs:
   build:
-    uses: pen-sotashimozono/.github/.github/workflows/paper-build.yml@v1
+    uses: pen-sotashimozono/.github/.github/workflows/paper-build.yml@ci/figures-generated-dir
