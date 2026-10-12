@@ -27,6 +27,10 @@ class Plan(unittest.TestCase):
         self.assertEqual([(s["old"], s["new"]) for s in steps], [
             ("v0.1.0-notes", "v0.1.0-lecture"), ("v0.1.1-notes", "v0.1.1-lecture"), ("v0.2.0-notes", "v0.2.0-lecture")])
 
+    def test_the_older_form_of_tag_keeps_its_form(self):
+        steps = rename.plan("notes", "lecture", ["notes-v0.0.11", "main-v0.0.11", "subnotes-v0.0.1", "v0.0.9"], [])
+        self.assertEqual([(s["old"], s["new"]) for s in steps], [("notes-v0.0.11", "lecture-v0.0.11")])
+
     def test_a_release_follows_its_tag_with_its_files(self):
         by_old = {s["old"]: s for s in rename.plan("notes", "lecture", TAGS, RELEASES)}
         self.assertIsNone(by_old["v0.1.0-notes"]["release"], "a tag that was never released is still renamed")
@@ -46,9 +50,12 @@ class Plan(unittest.TestCase):
 
 class Changelog(unittest.TestCase):
     def test_headings_of_that_id_only(self):
-        text = "## v0.1.1-notes — 2026-01-02\n\nSee v0.1.0-notes for the rest.\n\n## v0.1.0-notes_old\n\n## v0.1.0-main — 2026-01-01\n"
+        text = ("## v0.1.1-notes — 2026-01-02\n\nSee v0.1.0-notes for the rest.\n\n## v0.1.0-notes_old\n\n"
+                "## v0.1.0-main — 2026-01-01\n\n## notes-v0.0.9 — 2025-12-01\n")
         self.assertEqual(rename.rewrite_changelog(text, "notes", "lecture"),
-                         "## v0.1.1-lecture — 2026-01-02\n\nSee v0.1.0-notes for the rest.\n\n## v0.1.0-notes_old\n\n## v0.1.0-main — 2026-01-01\n")
+                         "## v0.1.1-lecture — 2026-01-02\n\nSee v0.1.0-notes for the rest.\n\n## v0.1.0-notes_old\n\n"
+                         "## v0.1.0-main — 2026-01-01\n\n## lecture-v0.0.9 — 2025-12-01\n")
+        self.assertEqual(rename.heading_tags(text, "notes"), ["v0.1.1-notes", "notes-v0.0.9"])
 
 
 if __name__ == "__main__":

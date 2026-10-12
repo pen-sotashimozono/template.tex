@@ -47,11 +47,12 @@ def plan(old: str, new: str, tags: list[str], releases: list[dict]) -> list[dict
             sys.exit(f"'{doc_id}' is not a document id (letters, digits and _)")
     if old == new:
         sys.exit("the two ids are the same")
-    pattern = re.compile(rf"v\d+\.\d+\.\d+-{re.escape(old)}")
     by_tag = {r["tag_name"]: r for r in releases}
     steps = []
-    for tag in sorted(t for t in tags if pattern.fullmatch(t)):
-        target = tag[: -len(old)] + new
+    for tag in sorted(tags):
+        target = renamed(tag, old, new)
+        if target is None:
+            continue
         if target in tags:
             sys.exit(f"{target} exists already; nothing was changed")
         step = {"old": tag, "new": target, "release": None, "title": None, "assets": []}
@@ -66,9 +67,29 @@ def plan(old: str, new: str, tags: list[str], releases: list[dict]) -> list[dict
     return steps
 
 
+VERSION = r"\d+\.\d+\.\d+"
+
+
+def renamed(tag: str, old: str, new: str) -> str | None:
+    """The tag under the new id, or None if it is not a tag of the old one.
+
+    v<version>-<id> is the form in use. <id>-v<version> is the one before it,
+    which a repository that started early still has; it keeps its form.
+    """
+    if re.fullmatch(rf"v{VERSION}-{re.escape(old)}", tag):
+        return tag[: -len(old)] + new
+    if re.fullmatch(rf"{re.escape(old)}-v{VERSION}", tag):
+        return new + tag[len(old):]
+    return None
+
+
+def heading_tags(text: str, old: str) -> list[str]:
+    return [t for t in re.findall(r"^## (\S+)", text, flags=re.M) if renamed(t, old, "x") is not None]
+
+
 def rewrite_changelog(text: str, old: str, new: str) -> str:
     """The headings of the old id's entries; nothing inside an entry."""
-    return re.sub(rf"^(## v\d+\.\d+\.\d+-){re.escape(old)}(?=\s|$)", rf"\g<1>{new}", text, flags=re.M)
+    return re.sub(r"^## (\S+)", lambda m: "## " + (renamed(m[1], old, new) or m[1]), text, flags=re.M)
 
 
 def run(*command: str, capture: bool = False) -> str:
@@ -97,15 +118,14 @@ def main() -> int:
     releases = [r for page in releases for r in page]
     steps = plan(args.old, args.new, tags, releases)
     if not steps:
-        print(f"{repo}: no tag v<version>-{args.old}; nothing to rename")
+        print(f"{repo}: no tag of the document '{args.old}'; nothing to rename")
         return 0
 
     for step in steps:
         print(f"{step['old']}  ->  {step['new']}" + ("" if step["release"] else "   (a tag with no release)"))
         for _, before, after in step["assets"]:
             print(f"    {before}  ->  {after}")
-    headings = len(re.findall(rf"^## v\d+\.\d+\.\d+-{re.escape(args.old)}(?=\s|$)", CHANGELOG.read_text(), flags=re.M)) \
-        if CHANGELOG.is_file() else 0
+    headings = len(heading_tags(CHANGELOG.read_text(), args.old)) if CHANGELOG.is_file() else 0
     print(f"{headings} heading(s) in {CHANGELOG.relative_to(ROOT)}")
     if not args.apply:
         print(f"\nNothing was changed. With --apply: {len(steps)} tag(s) of {repo} are renamed and the old ones"
