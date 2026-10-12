@@ -30,7 +30,7 @@
 [main]
 version = "0.0.13"
 
-[zznotes]
+[notes]
 version = "0.0.17"
 
 # `source` (pptx / docx) instead of a root: built to PDF by LibreOffice in CI.
