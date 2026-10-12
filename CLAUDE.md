@@ -35,7 +35,7 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `references.bib` | bibliography — from `doiget cite`, never hand-written |
 | `docs.toml` | root documents and versions — the version authority |
 | `papers/`, `papers/src/` | one PDF per bibkey; full text for grepping |
-| `figures/` | four kinds, told apart by directory: `src/<topic>/` figure pages you write; `generated/<topic>/` what `build.sh` makes of them (SVG committed, PDF built and not committed) — never edited by hand, and remade if deleted; `assets/` figures made one by one outside the page build (a plot exported from elsewhere, a photograph), committed as the originals they are; `papers/<bibkey>-fig<N>.svg` cited papers' own figures — see below |
+| `figures/` | four kinds, told apart by directory: `src/<topic>/` figure pages you write; `generated/<topic>/` what `build.sh` makes of them (SVG and PDF, built and not committed) — never edited by hand, and remade if deleted; `assets/` figures made one by one outside the page build (a plot exported from elsewhere, a photograph), committed as the originals they are; `papers/<bibkey>-fig<N>.svg` cited papers' own figures — see below |
 | `src/notes/`, `src/main/` | children of `notes.tex` and of `main.tex`: `src/<document id>/`, one directory per document |
 | `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
@@ -97,14 +97,13 @@ tensor diagram) or `<page>.py` (a script that writes the SVG path it is given)
 .github/tools/figures/build.sh --pdf-only    # only the PDFs that are missing or out of date
 ```
 
-The SVGs are committed and the PDFs are not (`.gitignore`): a PDF is stored
-whole again at every rebuild, and it can always be made from its page. The
-root `.latexmkrc` therefore runs `build.sh --pdf-only` before every build of
-a document. It writes the PDF of each `.tex` page that has none, or whose page
-is newer, and touches no SVG, so a fresh clone, CI and a release build a
-document with `latexmk` alone and never rewrite a committed file. After
-editing a page, run `build.sh --pdf <topic>` yourself: that is what brings the
-SVG up to date, and the SVG is what you commit. `closure.py` reads a built PDF
+Nothing under `figures/generated/` is committed (`.gitignore`): a built file
+is stored whole again at every rebuild, and it can always be made from its
+page. The root `.latexmkrc` therefore runs `build.sh --pdf-only` before every
+build of a document. It writes the PDF of each `.tex` page that has none, or
+whose page is newer, so a fresh clone, CI and a release build a document with
+`latexmk` alone. The SVGs are made only when you ask for them, with
+`build.sh <topic>`: for slides, or to look at a page. `closure.py` reads a built PDF
 in a build record as the page it came from, the shared `.tex` and `.sty` files
 beside `build.sh` and the tikz-tensors pin, so a PR that changes only a figure
 still counts as touching the documents that include it.

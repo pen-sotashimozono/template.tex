@@ -49,9 +49,10 @@ _minted*/
 !figures/
 !figures/**
 
-# figures/generated/ の PDF は figures/src/ のページから作るので管理しない (SVG は管理する)。
-# latexmk が .latexmkrc から build.sh --pdf-only を呼んで、無いものと古いものを作る
-/figures/generated/**/*.pdf
+# figures/generated/ は figures/src/ のページから作るので、PDF も SVG も管理しない。
+# 文書が使う PDF は latexmk が .latexmkrc から build.sh --pdf-only を呼んで、無いものと古いものを作る。
+# SVG が要るときは build.sh を自分で回す
+/figures/generated/
 
 # ただし .github/tools/figures/build.sh の中間生成物は除外する。上の打ち消しより後に置くこと
 # (build.sh は終了時に消すが、途中で止めると残る)

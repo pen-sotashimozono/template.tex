@@ -30,15 +30,15 @@
 # that \includegraphics the page (graphicspath {figures/}: generated/<topic>/<name>).
 # The SVG is what slides paste; the PDF is what LaTeX includes.
 #
-# The SVGs are committed and the PDFs are not (.gitignore): a PDF is stored
+# Nothing under generated/ is committed (.gitignore): a built file is stored
 # whole again at every rebuild, and it can always be made from its page. So a
-# checkout has no PDF until the pages are built. --pdf-only does that and no
-# more: for each .tex page whose PDF is missing or older than the page, it
-# writes the PDF and leaves the SVG alone, so a fresh clone or a CI runner
-# never rewrites a committed file. Python pages are skipped (they have no
-# PDF), and neither pdftocairo nor pdfinfo is needed. The root .latexmkrc
-# runs it before every build of a document. After editing a page, run the
-# script without --pdf-only (with --pdf) so that the SVG follows.
+# checkout has neither PDF nor SVG until the pages are built. --pdf-only
+# builds what a document needs and no more: for each .tex page whose PDF is
+# missing or older than the page, it writes the PDF and leaves the SVG alone.
+# Python pages are skipped (they have no PDF), and neither pdftocairo nor
+# pdfinfo is needed. The root .latexmkrc runs it before every build of a
+# document. Where the SVGs are wanted, for slides or to look at a page, run
+# the script without --pdf-only.
 #
 # One page per source; a .tex that produces more is an error. LaTeX runs in
 # figures/.build/, which is deleted on exit, so nothing but src/ and generated/

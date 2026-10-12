@@ -79,15 +79,11 @@ jobs:
             git add .gitmodules .claude
           fi
 
-          # figures/generated/ holds what build.sh made of the template's pages.
-          # They are the template's files, built with its TeX Live and its pin,
-          # and a project commits only what it has built itself. The pages
-          # under figures/src/ stay: build.sh makes the SVGs again from them,
-          # and latexmk the PDFs a document includes.
+          # figures/generated/ is not committed: latexmk builds the PDFs that a
+          # document includes from the pages under figures/src/, and build.sh
+          # the SVGs when they are wanted. Nothing of it is in the index of the
+          # template, and this line only clears what an older copy still tracks.
           git rm -r -q --ignore-unmatch figures/generated
-          mkdir -p figures/generated
-          : > figures/generated/.gitkeep
-          git add figures/generated
 
           # The syncs, every four hours, keep the template itself on tikz-tensors' main and
           # on .claude's. A project moves when it chooses -- tikz-tensors.sh pin
