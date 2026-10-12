@@ -67,6 +67,11 @@ jobs:
               echo "python3 .github/scripts/rename_releases.py ${OLD} ${NEW} --apply"
             fi
           done)"
+          if [ -n "$TODO" ]; then
+            # Every step then, also the one that starts from the id a swap
+            # passes through, which has no tag until the step before it has run.
+            TODO="$(echo "$RENAMED" | sed 's|^\([^ ]*\) \(.*\)$|python3 .github/scripts/rename_releases.py \1 \2 --apply|')"
+          fi
           if [ -z "$TODO" ]; then
             echo "Renamed, and no tag is left under an old id:"
             echo "$RENAMED" | sed 's/ / -> /; s/^/  /'
