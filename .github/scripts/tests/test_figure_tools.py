@@ -170,6 +170,24 @@ class PdfOnly(unittest.TestCase):
         r = subprocess.run(["bash", str(repo.tools / "build.sh"), "--pdf-only"], capture_output=True, text=True)
         self.assertEqual((r.returncode, r.stdout, r.stderr), (0, "", ""))
 
+    def test_pages_are_built_several_at_a_time_and_one_failure_fails_the_run(self):
+        repo = self.repo()
+        for name in "defgh":
+            repo.write(f"figures/src/t/{name}.tex", "a page\n")
+        slow = TEX_STUBS["latexmk"].replace('mkdir -p "$d" && printf', 'sleep 0.5; printf')
+        (self.bin / "latexmk").write_text(slow)
+        env = dict(os.environ, PATH=f"{self.bin}{os.pathsep}{os.environ['PATH']}", FIGURE_JOBS="6")
+        cmd = ["bash", str(repo.tools / "build.sh"), "--pdf-only"]
+        start = time.time()
+        r = subprocess.run(cmd, capture_output=True, text=True, env=env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(sorted(r.stdout.split()), [f"figures/assets/t/{n}.pdf" for n in "cdefgh"])
+        self.assertLess(time.time() - start, 2.0, "six pages of 0.5 s each, one after another, take 3 s")
+        (self.bin / "latexmk").write_text('#!/bin/sh\ncase "$*" in *e.tex*) exit 1;; esac\n' + slow.split("\n", 1)[1])
+        r = subprocess.run(cmd + ["--force"], capture_output=True, text=True, env=env)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("src/t/e.tex failed", r.stderr)
+
     def test_an_svg_whose_page_is_gone_is_left_for_the_writer(self):
         repo = self.repo()
         svg = repo.write("figures/assets/t/gone.svg", "committed")

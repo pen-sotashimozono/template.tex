@@ -105,30 +105,23 @@ stale() {
   return 1
 }
 
-# tikz-tensors is a submodule: present it before the first LaTeX page that is
-# built, so a fresh clone (or a repository made from the template) builds with
-# no setup. Not before that: a run with nothing to build needs neither git nor
-# the network, and the root .latexmkrc makes such a run before every document.
-ensured=0
+# What a page builds into: the SVG, or under --pdf-only the PDF (the SVG of a
+# checkout is not ours to judge). Python pages have no PDF, hence nothing.
+output() {
+  local rel="${1#src/}"
+  if [ "$pdfonly" -eq 0 ]; then echo "assets/${rel%.*}.svg"; return; fi
+  case "$1" in *.tex) echo "assets/${rel%.*}.pdf" ;; esac
+}
 
-# ${sources[@]+...}: bash 3.2 (macOS) calls an empty array unbound under set -u.
-for src in ${sources[@]+"${sources[@]}"}; do
-  rel="${src#src/}"
+# One page, in a subshell of its own: `exit` ends the page, not the run.
+build_page() {
+  local src="$1" rel="${1#src/}" topic name svg pages
   topic="$(dirname "$rel")"
   name="${rel##*/}"; name="${name%.*}"
   svg="assets/$topic/$name.svg"
-  out="$svg"
-  if [ "$pdfonly" -eq 1 ]; then
-    case "$src" in *.py) continue ;; esac
-    # Measured against the PDF, not the SVG: the SVG of a checkout is not ours to judge.
-    out="assets/$topic/$name.pdf"
-  fi
-  stale "$out" "$src" || continue
-  mkdir -p "assets/$topic"
+  mkdir -p "assets/$topic" "$BUILD/$topic"
   case "$src" in
     *.tex)
-      [ "$ensured" -eq 1 ] || { "$TOOLS/tikz-tensors.sh" ensure; ensured=1; }
-      mkdir -p "$BUILD/$topic"
       # The trailing ':' keeps TeX's default search path after the shared files.
       # Only tikz-tensors/tex, not the whole submodule: its tests and examples
       # hold .tex files a page must never pick up by name.
@@ -160,7 +153,6 @@ for src in ${sources[@]+"${sources[@]}"}; do
     *.py)
       # Write into .build/ and move on success, so a failed run (a missing
       # pyscf, say) leaves the existing SVG in place.
-      mkdir -p "$BUILD/$topic"
       # No __pycache__ next to a shared module: nothing is written outside assets/.
       if ! PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$TOOLS${PYTHONPATH:+:$PYTHONPATH}" \
           "$PYTHON" "$src" "$BUILD/$topic/$name.svg" >/dev/null; then
@@ -170,8 +162,42 @@ for src in ${sources[@]+"${sources[@]}"}; do
       mv "$BUILD/$topic/$name.svg" "$svg"
       ;;
   esac
-  echo "figures/$out"
+  echo "figures/$(output "$src")"
+}
+
+# The pages to build, decided before any is built.
+# ${sources[@]+...}: bash 3.2 (macOS) calls an empty array unbound under set -u.
+todo=()
+for src in ${sources[@]+"${sources[@]}"}; do
+  out="$(output "$src")"
+  [ -n "$out" ] && stale "$out" "$src" && todo+=("$src")
 done
+
+# tikz-tensors is a submodule: present it before the first LaTeX page that is
+# built, so a fresh clone (or a repository made from the template) builds with
+# no setup. Not before that: a run with nothing to build needs neither git nor
+# the network, and the root .latexmkrc makes such a run before every document.
+for src in ${todo[@]+"${todo[@]}"}; do
+  case "$src" in *.tex) "$TOOLS/tikz-tensors.sh" ensure; break ;; esac
+done
+
+# Pages do not read each other, so they are built several at a time: as many
+# as there are processors, or FIGURE_JOBS. A page that fails lets the others
+# of its batch finish, and the run stops there.
+jobs="${FIGURE_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)}"
+pids=()
+reap() {
+  local pid failed=0
+  for pid in ${pids[@]+"${pids[@]}"}; do wait "$pid" || failed=1; done
+  pids=()
+  [ "$failed" -eq 0 ] || exit 1
+}
+for src in ${todo[@]+"${todo[@]}"}; do
+  ( build_page "$src" ) &
+  pids+=($!)
+  [ "${#pids[@]}" -lt "$jobs" ] || reap
+done
+reap
 
 # assets/ mirrors src/: drop an SVG or PDF whose source is gone, then empty topics.
 # --pdf-only drops PDFs alone: an SVG is a committed file, and deleting one is
