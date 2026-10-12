@@ -25,9 +25,11 @@ again from a commit where the document still has its old id. The workflow is
 therefore switched off while the tags move and on again afterwards, also when
 a step fails. Needs gh, signed in with write access.
 
-docs.toml, the root file and src/<id>/ are renamed by hand, in a PR. When that
-PR is merged, AutoRelease.yml does the rest by itself, before it releases
-anything:
+docs.toml, the root file and src/<id>/ are renamed by hand, in a PR. Run this
+from a machine signed in to GitHub, not from a workflow: the token a workflow
+runs with may not put a tag on an old commit whose workflow files differ from
+today's. When the PR is merged, AutoRelease.yml holds every release back until
+the tags have been moved, and finds what was renamed with
 
     python3 .github/scripts/rename_releases.py --renamed-since <commit>    # prints "old new" per renamed document
 
