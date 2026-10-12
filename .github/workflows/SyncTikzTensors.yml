@@ -3,7 +3,8 @@ name: Sync tikz-tensors
 # The template itself follows tikz-tensors: every four hours (or on demand) it moves
 # the submodule to tikz-tensors' main -- which is always its newest release --
 # rebuilds the example figures with it, checks the pin and the scripts,
-# compiles every document, and commits the result to main. Nothing happens when main has not moved.
+# compiles every document, and commits the pin to main. The figures are built
+# to see that they build: what build.sh makes is not committed. Nothing happens when main has not moved.
 #
 # Only the template runs this. A repository made from it chooses when to move
 # (tikz-tensors.sh pin), so Initialize.yml deletes this file with itself.
@@ -107,7 +108,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .github/tools/figures/tikz-tensors figures/generated
+          git add .github/tools/figures/tikz-tensors
           git commit -m "chore: tikz-tensors $TAG (sync with its main)"
           git push origin HEAD:main
 
