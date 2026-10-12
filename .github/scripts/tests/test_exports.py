@@ -82,6 +82,36 @@ class Manifest(unittest.TestCase):
                 self.assertIn("docs.toml [", result.stderr)
 
 
+class RootFiles(unittest.TestCase):
+    """A LaTeX document's root must be there; an export may wait for its source."""
+
+    def check_step(self, repo):
+        (repo.root / "base.toml").write_text(repo.git("show", "main:docs.toml"))
+        return repo.run("docs.py", "check-step", "--base", "base.toml")
+
+    def test_a_table_without_its_file_fails_the_check_that_needs_no_build(self):
+        repo = Repo(self)
+        result = self.check_step(repo)
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn("main.tex does not exist", result.stdout)
+        repo.write("main.tex", "")
+        self.assertEqual(self.check_step(repo).returncode, 0)
+
+    def test_root_names_the_missing_file_before_latex_does(self):
+        repo = Repo(self, '\n[notes]\nroot = "book/notes.tex"\nversion = "0.1.0"\n')
+        result = repo.run("docs.py", "root", "notes")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("book/notes.tex does not exist (its `root`)", result.stderr)
+        repo.write("book/notes.tex", "")
+        self.assertEqual(repo.run("docs.py", "root", "notes").stdout.strip(), "book/notes.tex")
+
+    def test_an_export_may_wait_for_its_source(self):
+        repo = Repo(self, '\n[talk]\nsource = "slides/talk.pptx"\nversion = "0.1.0"\n')
+        repo.write("main.tex", "")
+        result = self.check_step(repo)
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+
 class CheckBump(unittest.TestCase):
     def repo_with_source(self):
         """main carries [talk] with its source committed; HEAD is a work branch."""

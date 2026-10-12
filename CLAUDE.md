@@ -12,6 +12,11 @@ document id, and the rest follows from it:
 A third document is one table; the CI matrix, tags and releases pick it up
 unchanged.
 
+The file a table stands for must exist: `<id>.tex`, or what `root` names.
+**Validate semver step** fails otherwise, naming the table and the file. An
+export is the exception: its table may be written before its `source` is
+committed.
+
 Each root carries its own complete preamble rather than sharing one, so either
 ships alone — at the cost that shared markup must be edited twice, and nothing
 catches a miss.
@@ -34,7 +39,7 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `src/notes/`, `src/main/` | children of `notes.tex` and of `main.tex`: `src/<document id>/`, one directory per document |
 | `slides/` (or anywhere) | pptx / docx exports, built to PDF in CI |
 | `.github/CHANGELOG.md` | one entry per version, headed by its tag |
-| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py` |
+| `.github/scripts/` | `bump.sh`, `docs.py`, `closure.py`, `diff.sh`, `arxiv_bundle.sh`, `refs_sync.sh`, `fetch_sources.sh`, `bib_files.py`, `exports.py`, `soffice_pdf.py`, `rename_releases.py` |
 | `.github/tools/figures/` | what runs the figure pages, never read while writing: `build.sh`, `latexmkrc`, `preamble.tex`, `notation.tex` (what the shapes of a tensor diagram stand for here), `paper_figures.py`, and `tikz-tensors/` (the TikZ format and theme, a git submodule pinned by `tikz-tensors.sh`) |
 | `.claude/rules/` | one file per subject, listed in `.claude/README.md`; all in force unless listed under "Rules not in force" below |
 | `.claude/skills/` | `changelog` (record a change and bump), `references` (doiget), `figure-pages` (an equation, tensor diagram or drawing), `paper-figures` (a cited paper's own figure), `cold-read` (a reader who did not write the passage, before the author sees it) |
@@ -205,6 +210,30 @@ Comparison is against the **current tip of `main`**. When two PRs touch the
 base-branch update alone does not re-trigger checks), resolve the
 `docs.toml` conflict by keeping your higher value, and re-bump. PRs on
 different documents do not collide.
+
+A document's id is in its tags (`v<version>-<id>`), in the titles of its
+releases and in the names of the files attached to them. After renaming a
+table in `docs.toml`, the document looks new and its next release has no
+previous tag to diff against. `rename_releases.py` moves the history to the
+new id: every tag, release, attached file and CHANGELOG heading.
+
+```sh
+python3 .github/scripts/rename_releases.py notes lecture            # what would change
+python3 .github/scripts/rename_releases.py notes lecture --apply    # change it
+```
+
+The old tags are deleted and GitHub does not redirect them, so a link to an
+old release stops working.
+
+It runs by itself. When a PR that renames a table in `docs.toml` is merged,
+`AutoRelease.yml` moves the releases first and only then decides what to
+release, so the document keeps its ladder. A document is followed by its
+file: it has a new id when its root (or `source`) now belongs to another
+table, because git sees the file renamed to that table's or because that table
+names the same file. Rename the file with `git mv`, in the same PR as the
+table. Two documents that trade ids are found the same way and moved through
+a temporary id; trade their `version`s in `docs.toml` too, since a version
+belongs to the document and not to the name.
 
 ## The submission bundle must compile alone
 

@@ -4,6 +4,12 @@ name: Auto Release
 # a pull_request checkout resolves to the PR's own tree and a closed-unmerged
 # PR would otherwise release the bump it was carrying.
 # `docs.py ids` lists LaTeX documents only, so exports get their own job.
+#
+# `rename` runs first. A document's id is in its tags, and "has this version a
+# tag?" is how the two jobs after it decide what to release. A PR that renames
+# a table in docs.toml would otherwise have the document released again under
+# its new id, as if it were new and with no diff, while its history stayed
+# under the old one.
 
 on:
   pull_request:
@@ -15,7 +21,48 @@ permissions:
   actions: write
 
 jobs:
+  rename:
+    name: Move the releases of a renamed document
+    if: github.event.pull_request.merged == true
+    runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","rosina"]') || 'ubuntu-latest' }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          fetch-depth: 0
+
+      # Against the commit main was at before the merge: the first parent,
+      # for a merge commit and a squash alike.
+      - name: Rename the tags, releases and files of each document renamed in docs.toml
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RENAMED="$(python3 .github/scripts/rename_releases.py --renamed-since HEAD^1)"
+          if [ -z "$RENAMED" ]; then
+            echo "No document was renamed."
+            exit 0
+          fi
+          echo "$RENAMED" | while read -r OLD NEW; do
+            echo "::group::${OLD} -> ${NEW}"
+            # --keep-workflow: a tag pushed with GITHUB_TOKEN starts no workflow.
+            python3 .github/scripts/rename_releases.py "$OLD" "$NEW" --apply --keep-workflow
+            echo "::endgroup::"
+          done
+          # The headings of the old id's entries, rewritten in the working tree.
+          if ! git diff --quiet -- .github/CHANGELOG.md; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -q -m "chore: changelog headings follow the renamed document" -- .github/CHANGELOG.md
+            # main may have moved on; the headings are whole lines no other change shares.
+            git pull -q --rebase origin main
+            git push -q origin HEAD:main
+          fi
+
   release:
+    needs: rename
     if: github.event.pull_request.merged == true
     uses: pen-sotashimozono/.github/.github/workflows/paper-auto-release.yml@v1
     permissions:
@@ -24,6 +71,7 @@ jobs:
 
   exports:
     name: Tag and release each export with a new version
+    needs: rename
     if: github.event.pull_request.merged == true
     runs-on: ${{ github.event.repository.private && fromJSON('["self-hosted","rosina"]') || 'ubuntu-latest' }}
     permissions:
