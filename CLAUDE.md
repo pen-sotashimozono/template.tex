@@ -12,6 +12,11 @@ document id, and the rest follows from it:
 A third document is one table; the CI matrix, tags and releases pick it up
 unchanged.
 
+The file a table stands for must exist: `<id>.tex`, or what `root` names.
+**Validate semver step** fails otherwise, naming the table and the file. An
+export is the exception: its table may be written before its `source` is
+committed.
+
 Each root carries its own complete preamble rather than sharing one, so either
 ships alone — at the cost that shared markup must be edited twice, and nothing
 catches a miss.
@@ -222,10 +227,13 @@ old release stops working.
 
 It runs by itself. When a PR that renames a table in `docs.toml` is merged,
 `AutoRelease.yml` moves the releases first and only then decides what to
-release, so the document keeps its ladder. A removed table and a new one
-count as a rename only when the file bears it out: git sees the old root (or
-`source`) renamed to the new one, or both tables name the same file. Rename
-the file with `git mv`, in the same PR as the table.
+release, so the document keeps its ladder. A document is followed by its
+file: it has a new id when its root (or `source`) now belongs to another
+table, because git sees the file renamed to that table's or because that table
+names the same file. Rename the file with `git mv`, in the same PR as the
+table. Two documents that trade ids are found the same way and moved through
+a temporary id; trade their `version`s in `docs.toml` too, since a version
+belongs to the document and not to the name.
 
 ## The submission bundle must compile alone
 

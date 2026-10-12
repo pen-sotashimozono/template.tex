@@ -19,7 +19,7 @@ reformat the file and drop every comment, and docs.toml is read by hand.
 Usage:
     python .github/scripts/docs.py ids [--json] [--all] [--file F]  # LaTeX ids; --all adds exports
     python .github/scripts/docs.py kind <id>                    # tex | export
-    python .github/scripts/docs.py root <id>                    # root .tex path
+    python .github/scripts/docs.py root <id>                    # root .tex path; fails if the file is not there
     python .github/scripts/docs.py version <id>                 # current version
     python .github/scripts/docs.py tag <id>                     # v<version>-<id>
     python .github/scripts/docs.py next <id> <patch|minor|major>
@@ -99,6 +99,27 @@ def load(path: pathlib.Path = MANIFEST) -> dict[str, dict]:
 
 def root_of(doc_id: str, docs: dict[str, dict]) -> str:
     return docs[doc_id].get("root", f"{doc_id}.tex")
+
+
+def missing_roots(docs: dict[str, dict]) -> list[str]:
+    """One message per LaTeX document whose root file is not there.
+
+    The id names the file (<id>.tex) unless `root` does, so a table renamed
+    without its file, or a typo in `root`, leaves a document that nothing can
+    build -- and the first thing to say so would be LaTeX, in a build job, as
+    "file not found". An export may wait for its source: a table whose
+    `source` is not committed yet is a deck still to be written, and nothing
+    is built or released for it until the file arrives.
+    """
+    messages = []
+    for doc_id, table in docs.items():
+        if kind_of(doc_id, table) != "tex":
+            continue
+        root = root_of(doc_id, docs)
+        if not (ROOT / root).is_file():
+            how = "its `root`" if "root" in table else "the default for that id; set `root` if the file has another name"
+            messages.append(f"docs.toml [{doc_id}]: {root} does not exist ({how})")
+    return messages
 
 
 def parse(version: str, where: str) -> tuple[int, int, int]:
@@ -248,6 +269,9 @@ def check_step(base_path: pathlib.Path) -> int:
     for gone in sorted(set(base) - set(head)):
         print(f"{gone}: removed from docs.toml. OK")
 
+    # Here because this is the check that needs no build, and so the first to answer.
+    errors += missing_roots(head)
+
     for message in errors:
         print(f"::error::{message}")
     return 1 if errors else 0
@@ -311,6 +335,10 @@ def main() -> int:
     elif args.command == "root":
         if kind_of(args.doc, docs[args.doc]) != "tex":
             sys.exit(f"{args.doc} is an export ({docs[args.doc]['source']}); it has no root .tex")
+        # Every build and release asks for the root first, so this is where a
+        # missing file is named before LaTeX gets to it.
+        for message in missing_roots({args.doc: docs[args.doc]}):
+            sys.exit(message)
         print(root_of(args.doc, docs))
     elif args.command == "version":
         print(docs[args.doc]["version"])
