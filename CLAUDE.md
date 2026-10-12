@@ -220,6 +220,13 @@ python3 .github/scripts/rename_releases.py notes lecture --apply    # change it
 The old tags are deleted and GitHub does not redirect them, so a link to an
 old release stops working.
 
+It runs by itself. When a PR that renames a table in `docs.toml` is merged,
+`AutoRelease.yml` moves the releases first and only then decides what to
+release, so the document keeps its ladder. A removed table and a new one
+count as a rename only when the file bears it out: git sees the old root (or
+`source`) renamed to the new one, or both tables name the same file. Rename
+the file with `git mv`, in the same PR as the table.
+
 ## The submission bundle must compile alone
 
 `arxiv_bundle.sh` flattens a document with `latexpand`, adds its `.bbl` and
