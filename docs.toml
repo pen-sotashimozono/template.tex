@@ -10,6 +10,10 @@
 # A table is a document iff it carries `version`; anything else here is
 # repository configuration.
 #
+# `auto_diff = true` in a document's table makes every local build also render
+# what changed since the last commit, as out/<id>-diff-HEAD..working.pdf
+# (.github/scripts/auto_diff.sh). It is off unless set, and never runs in CI.
+#
 # `version` is the only version authority in this repository -- there is no
 # VERSION file. The version-check job in latex-ci.yml requires a one-step semver
 # bump for every document a PR touches, and forbids one for the documents it

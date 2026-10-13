@@ -42,10 +42,14 @@ mkdir -p "$DEST"
 latexpand "$ROOT_TEX" > "$DEST/$STEM.tex"
 
 # arXiv runs bibtex only if asked; shipping the .bbl is the usual way round it.
-if [ -f "out/$STEM.bbl" ]; then
-  cp "out/$STEM.bbl" "$DEST/"
+AUXD=out
+[ -f "$(dirname "$0")/aux_dir.sh" ] && AUXD="$(sh "$(dirname "$0")/aux_dir.sh")"
+BBL="$AUXD/$STEM.bbl"
+[ -f "$BBL" ] || BBL="out/$STEM.bbl"
+if [ -f "$BBL" ]; then
+  cp "$BBL" "$DEST/"
 else
-  echo "::warning::$DOC: out/$STEM.bbl is missing, so the bundle has no bibliography. Build $ROOT_TEX first." >&2
+  echo "::warning::$DOC: $BBL is missing, so the bundle has no bibliography. Build $ROOT_TEX first." >&2
 fi
 
 # Figures keep their path below figures/, so \includegraphics{generated/<topic>/<page>}

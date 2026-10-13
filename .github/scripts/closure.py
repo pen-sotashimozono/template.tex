@@ -141,8 +141,16 @@ def figure_sources(path: str, tracked: set[str]) -> set[str]:
 def closure(doc_id: str, doc: dict, tracked: set[str]) -> set[str]:
     root = root_of(doc_id, {doc_id: doc})
     stem = pathlib.Path(root).stem
-    fls = ROOT / "out" / f"{stem}.fls"
-    fdb = ROOT / "out" / f"{stem}.fdb_latexmk"
+    # The build record is in the aux dir of .latexmkrc (aux_dir.sh), or in out/,
+    # where a workflow that collected it puts it.
+    aux = ROOT / subprocess.run(
+        ["sh", str(pathlib.Path(__file__).resolve().parent / "aux_dir.sh"), str(ROOT / ".latexmkrc")],
+        capture_output=True, text=True, cwd=ROOT,
+    ).stdout.strip()
+    if not (aux / f"{stem}.fls").exists() and not (aux / f"{stem}.fdb_latexmk").exists():
+        aux = ROOT / "out"
+    fls = aux / f"{stem}.fls"
+    fdb = aux / f"{stem}.fdb_latexmk"
     if not fls.exists() and not fdb.exists():
         sys.exit(
             f"{doc_id}: no build record under out/ (looked for {fls.name} and "
