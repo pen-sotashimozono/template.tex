@@ -3,11 +3,9 @@ $lualatex   = 'lualatex -shell-escape -interaction=nonstopmode -synctex=1 -file-
 $pdf_mode   = 4;    # lualatex
 $bibtex_use = 1;
 
-# PDFs stand in out/, everything else in out/tmp/. In CI the auxiliary files
-# stay in out/, where the shared workflow looks for the build record.
-my $in_ci = $ENV{CI} || $ENV{GITHUB_ACTIONS} || $ENV{GITHUB_RUN_ID};
+# PDFs stand in out/, everything else in out/tmp/.
 $out_dir = 'out';
-$aux_dir = $in_ci ? 'out' : 'out/tmp';
+$aux_dir = 'out/tmp';
 
 $clean_ext = 'bcf run.xml synctex.gz synctex(busy) idx ind ilg acn acr alg glg glo gls ist nav snm vrb xdv';
 
@@ -16,7 +14,7 @@ $clean_ext = 'bcf run.xml synctex.gz synctex(busy) idx ind ilg acn acr alg glg g
 my $compiles = !grep { /^--?(c|C|CA|v|version|h|help|commands|showextraoptions)$/ } @ARGV;
 
 # Move what a build or an earlier version left in out/ besides PDFs.
-if ( $compiles && !$in_ci ) {
+if ( $compiles ) {
     mkdir $_ for grep { !-d } ( 'out', 'out/tmp' );
     if ( opendir( my $dh, 'out' ) ) {
         for my $f ( grep { !/^\./ && !/\.pdf$/ && -f "out/$_" } readdir $dh ) {
@@ -36,7 +34,7 @@ if ( $compiles && -d 'figures/src' && -f $figure_build ) {
     }
     elsif ( $status != 0 ) {
         my $message = "latexmk: a figure page did not build; run $figure_build --pdf-only to see it";
-        die "$message\n" if $in_ci;
+        die "$message\n" if $ENV{CI} || $ENV{GITHUB_ACTIONS} || $ENV{GITHUB_RUN_ID};
         warn "$message\n";
     }
 }
