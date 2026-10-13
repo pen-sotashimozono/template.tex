@@ -1,44 +1,44 @@
-# LuaLaTeX + BibTeX (revtex4-2 uses bibtex, not biber)
+# LuaLaTeX + BibTeX
 $lualatex   = 'lualatex -shell-escape -interaction=nonstopmode -synctex=1 -file-line-error %O %S';
-$pdf_mode   = 4;    # 1=pdflatex, 4=lualatex, 5=xelatex
-$bibtex_use = 1;    # 1=bibtex
+$pdf_mode   = 4;    # lualatex
+$bibtex_use = 1;
 
-# Output directory (relative to root .tex file)
+# PDFs stand in out/, everything else in out/tmp/.
 $out_dir = 'out';
+$aux_dir = 'out/tmp';
 
-# Clean targets (in addition to latexmk defaults)
 $clean_ext = 'bcf run.xml synctex.gz synctex(busy) idx ind ilg acn acr alg glg glo gls ist nav snm vrb xdv';
 
-# Figure pages. The PDFs under figures/generated/ are built from figures/src/ and
-# not committed, so they are made here, before the document is compiled: the
-# ones that are missing or older than their page, and nothing else. This is
-# what lets a fresh clone, a CI runner and a release build the document with
-# no step of their own.
-#
-# A page that fails stops the build in CI and nowhere else. There a broken
-# page must not be merged or released. On a writer's machine it is one page
-# among many, often the one being drawn, and it must not keep every document
-# from compiling: the others are built, the failure is named, and a document
-# that includes the page shows the PDF of its last good build, or stops at the
-# file it cannot find. CI is told by its variables; GITHUB_RUN_ID is the one
-# that reaches the LaTeX container, which is not handed CI itself.
-#
-# latexmk reads this file whatever it was asked to do, so the calls that
-# compile nothing (cleaning up, printing the version or the help) are told
-# apart here, from @ARGV, which latexmk has not parsed yet. Where there is no
-# bash to run the script (system returns -1), the build goes on with a
-# warning: a document that includes no page still compiles, and one that does
-# stops at the page it cannot find.
-my $figure_build = '.github/tools/figures/build.sh';
+# latexmk reads this file for every call, so calls that compile nothing are
+# told apart here, from @ARGV.
 my $compiles = !grep { /^--?(c|C|CA|v|version|h|help|commands|showextraoptions)$/ } @ARGV;
+
+# Move what a build or an earlier version left in out/ besides PDFs.
+if ( $compiles ) {
+    mkdir $_ for grep { !-d } ( 'out', 'out/tmp' );
+    if ( opendir( my $dh, 'out' ) ) {
+        for my $f ( grep { !/^\./ && !/\.pdf$/ && -f "out/$_" } readdir $dh ) {
+            rename "out/$f", "out/tmp/$f";
+        }
+        closedir $dh;
+    }
+}
+
+# Figure pages: build the PDFs under figures/generated/ that are missing or
+# older than their page. A failing page stops the build in CI only.
+my $figure_build = '.github/tools/figures/build.sh';
 if ( $compiles && -d 'figures/src' && -f $figure_build ) {
     my $status = system( 'bash', $figure_build, '--pdf-only' );
     if ( $status == -1 ) {
-        warn "latexmk: no bash to run $figure_build; the PDFs under figures/generated/ were not built\n";
+        warn "latexmk: no bash to run $figure_build; the figure PDFs were not built\n";
     }
     elsif ( $status != 0 ) {
-        my $message = "latexmk: a figure page did not build (named above); run $figure_build --pdf-only to see it again";
+        my $message = "latexmk: a figure page did not build; run $figure_build --pdf-only to see it";
         die "$message\n" if $ENV{CI} || $ENV{GITHUB_ACTIONS} || $ENV{GITHUB_RUN_ID};
-        warn "$message\nlatexmk: going on without it. CI stops here.\n";
+        warn "$message\n";
     }
 }
+
+# After a build: move the synctex file, which latexmk writes next to the PDF,
+# to out/tmp/.
+$success_cmd = 'mv -f out/*.synctex.gz out/tmp/ 2>/dev/null; true';
