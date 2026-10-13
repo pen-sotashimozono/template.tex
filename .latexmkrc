@@ -39,6 +39,8 @@ if ( $compiles && -d 'figures/src' && -f $figure_build ) {
     }
 }
 
-# After a build: move the synctex file, which latexmk writes next to the PDF,
-# to out/tmp/.
-$success_cmd = 'mv -f out/*.synctex.gz out/tmp/ 2>/dev/null; true';
+# After a build: for a document with `auto_diff = true` in docs.toml, render
+# what changed since the last commit (skipped where the script is absent, as in
+# the submission bundle). The synctex file, which latexmk writes next to the PDF,
+# is moved to out/tmp/.
+$success_cmd = 'if [ -f .github/scripts/auto_diff.sh ]; then sh .github/scripts/auto_diff.sh %R; fi; mv -f out/*.synctex.gz out/tmp/ 2>/dev/null; true';

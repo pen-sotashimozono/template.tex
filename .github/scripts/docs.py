@@ -21,6 +21,7 @@ Usage:
     python .github/scripts/docs.py kind <id>                    # tex | export
     python .github/scripts/docs.py root <id>                    # root .tex path; fails if the file is not there
     python .github/scripts/docs.py version <id>                 # current version
+    python .github/scripts/docs.py get <id> <key> [default]     # any other key of the table
     python .github/scripts/docs.py tag <id>                     # v<version>-<id>
     python .github/scripts/docs.py next <id> <patch|minor|major>
     python .github/scripts/docs.py bump <id> <patch|minor|major>
@@ -296,6 +297,10 @@ def main() -> int:
         ("tag", "print a document's release tag"),
     ):
         sub.add_parser(name, help=help_text).add_argument("doc")
+    p_get = sub.add_parser("get", help="print another key of a document's table")
+    p_get.add_argument("doc")
+    p_get.add_argument("key")
+    p_get.add_argument("default", nargs="?", default="")
     for name, help_text in (
         ("next", "print the version one step up, without writing"),
         ("bump", "raise a document's version by one step"),
@@ -342,6 +347,9 @@ def main() -> int:
         print(root_of(args.doc, docs))
     elif args.command == "version":
         print(docs[args.doc]["version"])
+    elif args.command == "get":
+        value = docs[args.doc].get(args.key, args.default)
+        print(str(value).lower() if isinstance(value, bool) else value)
     elif args.command == "tag":
         # Version first: GitHub orders tags version-aware, so v0.0.12-main and
         # v0.0.12-notes sit together and the newest release is at the top.
