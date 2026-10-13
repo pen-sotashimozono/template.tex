@@ -16,7 +16,12 @@
 # --init`. A repository made from the template has .gitmodules but no pinned
 # commit ("Use this template" drops it), so the submodule is added afresh at
 # tikz-tensors' main. It also sets push.recurseSubmodules=check here, so git
-# refuses to push a pin whose commit was never pushed to tikz-tensors.
+# refuses to push a pin whose commit was never pushed to tikz-tensors. In CI
+# (CI is set) a submodule that is there but not at the recorded pin is moved to
+# it: a self-hosted runner keeps its checkout from run to run, and the build
+# must use the tikz-tensors the commit names, not the one of an earlier run.
+# On a writer's machine it is left alone, since it may be a proposal in
+# development that is not staged yet.
 # TIKZ_TENSORS_URL overrides the repository (the tests).
 set -eu
 URL="${TIKZ_TENSORS_URL:-https://github.com/pen-sotashimozono/tikz-tensors}"
@@ -64,7 +69,13 @@ ensure() {  # [tag|latest]: make the submodule present; a new one is added at it
   # .git/config) would otherwise fight over the lock on that file.
   [ "$(git_root config --get push.recurseSubmodules || true)" = check ] \
     || git_root config push.recurseSubmodules check
-  [ -f "$STY" ] && return 0
+  if [ -f "$STY" ]; then
+    if [ -n "${CI:-}" ] && [ -n "$(pinned)" ] && [ "$(git_sub rev-parse HEAD)" != "$(pinned)" ]; then
+      git_root submodule update --init -- "$REL" >&2 \
+        || die "the pinned tikz-tensors commit $(pinned) is not on $URL"
+    fi
+    return 0
+  fi
   if [ -n "$(pinned)" ]; then
     git_root submodule update --init -- "$REL" >&2 \
       || die "the pinned tikz-tensors commit $(pinned) is not on $URL; push it from inside $REL"
