@@ -17,4 +17,4 @@ permissions:
 
 jobs:
   build:
-    uses: pen-sotashimozono/.github/.github/workflows/paper-build.yml@main
+    uses: pen-sotashimozono/.github/.github/workflows/paper-build.yml@v1
