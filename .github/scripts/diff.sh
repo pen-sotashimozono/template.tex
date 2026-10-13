@@ -7,7 +7,7 @@
 #   ./.github/scripts/diff.sh -d notes HEAD~5           # pick the document explicitly
 #
 # Output: out/<document>-diff-<from>..<to>.pdf (the annotated .tex and the auxiliary
-# files of its build go to out/tmp/)
+# files of its build go to the aux dir of .latexmkrc)
 #
 # The document is taken from the from-revision when it is a v<version>-<id>
 # tag, since that is the usual way in; otherwise -d, or the single document in
@@ -81,7 +81,8 @@ else
   LABEL="working"
 fi
 
-mkdir -p out/tmp
+AUX="$(sh .github/scripts/aux_dir.sh)"
+mkdir -p out "$AUX"
 NAME="${DOC}-diff-${FROM}..${LABEL}"
 # A changed equation is set as a whole, the old one deleted and the new one
 # added: marking changes term by term breaks alignments.
@@ -90,7 +91,7 @@ latexdiff --math-markup=whole "$WORK/from.tex" "$WORK/to.tex" > "$WORK/diff.tex"
 # refuses. Inside deleted text \label does nothing; the wrapper is robust, so
 # that a changed heading still goes into the table of contents.
 printf '%s\n' '\makeatletter\let\DIFdelwithlabels\DIFdel\DeclareRobustCommand{\DIFdel}[1]{\begingroup\let\label\@gobble\DIFdelwithlabels{#1}\endgroup}\makeatother' > "$WORK/difflabels.tex"
-sed 's/^\\begin{document}/\\input{difflabels}\\begin{document}/' "$WORK/diff.tex" > "out/tmp/${NAME}.tex"
+sed 's/^\\begin{document}/\\input{difflabels}\\begin{document}/' "$WORK/diff.tex" > "$AUX/${NAME}.tex"
 # A deleted passage keeps its \includegraphics, and a figure that only the
 # from-revision has is not in the working tree. Its worktree is searched after
 # the current directory, so that nothing is copied into the repository. With
@@ -98,11 +99,11 @@ sed 's/^\\begin{document}/\\input{difflabels}\\begin{document}/' "$WORK/diff.tex
 SEARCH="$WORK:$WORK/from:"
 [ -z "$TO" ] || SEARCH="$WORK:$WORK/to:$WORK/from:"
 TEXINPUTS=".:$SEARCH${TEXINPUTS:-}" \
-  latexmk -lualatex -interaction=nonstopmode -outdir=out -auxdir=out/tmp "out/tmp/${NAME}.tex" >/dev/null 2>&1 || true
+  latexmk -lualatex -interaction=nonstopmode -outdir=out -auxdir="$AUX" "$AUX/${NAME}.tex" >/dev/null 2>&1 || true
 
 if [ -f "out/${NAME}.pdf" ]; then
   echo "out/${NAME}.pdf"
 else
-  echo "PDF not produced; the annotated source is at out/tmp/${NAME}.tex" >&2
+  echo "PDF not produced; the annotated source is at $AUX/${NAME}.tex" >&2
   exit 1
 fi

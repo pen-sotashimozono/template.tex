@@ -3,7 +3,8 @@ $lualatex   = 'lualatex -shell-escape -interaction=nonstopmode -synctex=1 -file-
 $pdf_mode   = 4;    # lualatex
 $bibtex_use = 1;
 
-# PDFs stand in out/, everything else in out/tmp/.
+# PDFs stand in out/, everything else in out/tmp/. Keep both as plain string
+# assignments: .github/scripts/aux_dir.sh reads them without running latexmk.
 $out_dir = 'out';
 $aux_dir = 'out/tmp';
 
