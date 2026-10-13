@@ -360,6 +360,7 @@ class TikzTensorsSubmodule(unittest.TestCase):
         self.env = dict(os.environ, GIT_CONFIG_COUNT="1", GIT_CONFIG_KEY_0="protocol.file.allow",
                         GIT_CONFIG_VALUE_0="always", GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@t",
                         GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@t")
+        self.env.pop("CI", None)  # the tests say where CI matters
         self.origin = root / "tikz-tensors"
         (self.origin / "tex").mkdir(parents=True)
         self.git(self.origin, "init", "-q", "-b", "main")
@@ -452,6 +453,17 @@ class TikzTensorsSubmodule(unittest.TestCase):
         self.assertFalse((clone / ".github/tools/figures/tikz-tensors/tex").exists())
         self.ok("ensure", repo=clone)
         self.assertEqual(self.version(clone), sty("0.1.0"), "the recorded pin, not the newest")
+
+    def test_ensure_in_ci_moves_a_stale_submodule_to_the_recorded_pin(self):
+        # a self-hosted runner keeps its checkout: the submodule of an earlier run is there
+        self.ok("pin", "v0.2.0")
+        self.git(self.repo, "commit", "-qm", "pin v0.2.0")
+        self.git(self.sub, "checkout", "-q", "v0.1.0")
+        self.ok("ensure")
+        self.assertEqual(self.version(), sty("0.1.0"), "left alone outside CI")
+        self.env["CI"] = "true"
+        self.ok("ensure")
+        self.assertEqual(self.version(), sty("0.2.0"), "the pin, in CI")
 
     # -- pin ----------------------------------------------------------------
 
