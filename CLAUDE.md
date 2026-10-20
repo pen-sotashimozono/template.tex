@@ -46,6 +46,17 @@ the root), `LICENSE` (GitHub detects a licence only at the root). `README.md`
 | `out/` | build output (gitignored) |
 | `log/` | released PDFs and their diffs, fetched by `release_log.py` with a page of what changed (gitignored; a copy of what the releases hold) |
 
+A change of layout or convention (where files in `out/` go, a new `docs.toml`
+key, the name of a PDF) is written into this section in the same PR, and, in a
+repository made from this template, into the template's `CLAUDE.md` as well.
+
+The scripts need Python 3.11 or later (`tomllib`, `X | None`, the `filter` of
+`tarfile`). Where `python3` is older (macOS ships 3.9), set `PYTHON=` for
+`bump.sh` and `diff.sh`, and put a newer `python3` first on `PATH` for the
+tests, `release_log.py` and `paper_figures.py`. A comment in `.latexmkrc` or in
+a script says what the code does that is not obvious from it, in a line or two,
+and leaves out the history of why.
+
 `.claude` is a git submodule,
 [pen-sotashimozono/.claude](https://github.com/pen-sotashimozono/.claude),
 shared by every repository made from the template. A clone without
@@ -62,7 +73,10 @@ in force while a project's text is being written and should not move under its
 author. A project therefore pins when it chooses.
 
 `latexmk main.tex` → `out/main.pdf`, `latexmk notes.tex` → `out/notes.pdf`. One
-`.latexmkrc` serves both; the stems differ so nothing collides.
+`.latexmkrc` serves both; the stems differ so nothing collides. `out/` keeps
+only the latest diff PDFs. A stale `out/<id>-diff-HEAD..working.pdf` is deleted
+after a commit, and an older tag's diff is made again with `diff.sh` when it is
+wanted.
 
 Before editing either preamble: **revtex4-2 bundles its own `natbib`**, so only
 `notes.tex` loads it. `\affiliation`, `\email` and `acknowledgments` are
